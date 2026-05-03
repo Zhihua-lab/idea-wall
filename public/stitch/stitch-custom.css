@@ -1,0 +1,200 @@
+/**
+ * Stitch-derived custom CSS. Scoped per page shell to avoid cross-page conflicts.
+ * Do not remove; extend with additional selectors if needed.
+ */
+
+/* ---------- Home (scrapbook list) ---------- */
+.stitch-shell--home .notebook-lines {
+  background-image: linear-gradient(rgba(116, 121, 103, 0.1) 1px, transparent 1px);
+  background-size: 100% 2.5rem;
+}
+.stitch-shell--home .grain-texture {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+.stitch-shell--home .folded-corner,
+.stitch-shell--write .folded-corner {
+  clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 0 100%);
+}
+.stitch-shell--home .folded-corner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 15%;
+  height: 15%;
+  background: rgba(0, 0, 0, 0.05);
+  border-bottom-left-radius: 4px;
+}
+.stitch-shell--home .washi-tape {
+  background: rgba(173, 212, 97, 0.4);
+  transform: rotate(-2deg);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+.stitch-shell--home .wavy-border {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23000' fill-opacity='1' d='M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,149.3C672,149,768,203,864,208C960,213,1056,171,1152,144C1248,117,1344,107,1392,101.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+  mask-size: cover;
+  mask-repeat: no-repeat;
+}
+.stitch-shell--home .sketchy-border {
+  border: 2px solid #747967;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+.stitch-shell--home .hand-drawn-oval {
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+
+/* ---------- Detail ---------- */
+.stitch-shell--detail .paper-texture {
+  background-color: #fff8f3;
+  background-image: radial-gradient(#e0d9d2 0.5px, transparent 0.5px);
+  background-size: 20px 20px;
+  position: relative;
+}
+.stitch-shell--detail .paper-texture::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('https://www.transparenttextures.com/patterns/felt.png');
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 10;
+}
+.stitch-shell--detail .wobbly-border {
+  border: 2px solid #747967;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+.stitch-shell--detail .folded-corner {
+  clip-path: polygon(0 0, 90% 0, 100% 10%, 100% 100%, 0 100%);
+}
+.stitch-shell--detail .washi-tape {
+  background: rgba(173, 212, 97, 0.4);
+  transform: rotate(-2deg);
+}
+.stitch-shell--detail .doodle-underline {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='10' viewBox='0 0 100 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 5 Q 25 0 50 5 T 100 5' stroke='%236B8E23' fill='transparent' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+.stitch-shell--detail .ink-blot {
+  filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.1));
+}
+
+/* ---------- Login ---------- */
+.stitch-shell--login .paper-grain {
+  background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuAkT3WnV5jS4rKEcnyUY9mC-VpRBGjpuocHgmRruBVVmoQrcmJWDgcCfujXoe39qjMHa0JQzb1zmmXjXlAASfM7PzvZGVUOM4ng0eT3VzqDK28IHkKKzlxFKp35ROWORZesLWJVwPPS5X_NgDWS45uAGVpWIToTDAmeSBY2Oen6x8wHpHFK-karH3y5HcPxP9yUVZ9yQ7qn_QqOIApXp-1GwDScQAJoQipeFQuAN95cJmDp-bRpupe8SCEx37RN1fn66zi-KJLutj8);
+  background-repeat: repeat;
+}
+.stitch-shell--login .stitch-pattern {
+  background-image: radial-gradient(#c4c9b4 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.stitch-shell--login .washi-tape {
+  mask-image: url("data:image/svg+xml;utf8,<svg viewBox=\"0 0 100 20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0 L10 2 L20 0 L30 3 L40 0 L50 2 L60 0 L70 3 L80 0 L90 2 L100 0 L100 20 L90 18 L80 20 L70 17 L60 20 L50 18 L40 20 L30 17 L20 20 L10 18 L0 20 Z\" fill=\"black\"/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg viewBox=\"0 0 100 20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0 L10 2 L20 0 L30 3 L40 0 L50 2 L60 0 L70 3 L80 0 L90 2 L100 0 L100 20 L90 18 L80 20 L70 17 L60 20 L50 18 L40 20 L30 17 L20 20 L10 18 L0 20 Z\" fill=\"black\"/></svg>");
+}
+.stitch-shell--login .folded-corner {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+}
+.stitch-shell--login .folded-corner-accent {
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.05) 50%);
+}
+.stitch-shell--login .sketchy-stroke {
+  border: 2px solid #747967;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+.stitch-shell--login .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.stitch-shell--login .custom-cursor {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z\"></path></svg>"),
+    auto;
+}
+
+/* ---------- Write ---------- */
+.stitch-shell--write {
+  background-image: radial-gradient(#d1d1d1 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  overflow-x: hidden;
+}
+.stitch-shell--write .noise-overlay {
+  position: fixed;
+  inset: 0;
+  background: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 9999;
+}
+.stitch-shell--write .notebook-line {
+  background-image: linear-gradient(to bottom, transparent 31px, #e5e7eb 31px);
+  background-size: 100% 32px;
+}
+.stitch-shell--write .washi-tape {
+  background: repeating-linear-gradient(45deg, #f0bd8b, #f0bd8b 10px, #ffdcbd 10px, #ffdcbd 20px);
+  opacity: 0.8;
+  mask-image: url("data:image/svg+xml,%3Csvg width='100' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 Q 5 10 10 0 Q 15 10 20 0 Q 25 10 30 0 Q 35 10 40 0 Q 45 10 50 0 Q 55 10 60 0 Q 65 10 70 0 Q 75 10 80 0 Q 85 10 90 0 Q 95 10 100 0 L 100 20 L 0 20 Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='100' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 Q 5 10 10 0 Q 15 10 20 0 Q 25 10 30 0 Q 35 10 40 0 Q 45 10 50 0 Q 55 10 60 0 Q 65 10 70 0 Q 75 10 80 0 Q 85 10 90 0 Q 95 10 100 0 L 100 20 L 0 20 Z' fill='black'/%3E%3C/svg%3E");
+}
+.stitch-shell--write .sketchy-border {
+  border: 2px solid #747967;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+.stitch-shell--write .hand-oval {
+  border-radius: 2% 98% 3% 97% / 96% 4% 96% 4%;
+}
+.stitch-shell--write .scribble-hover:hover {
+  transform: rotate(-1deg) scale(1.02);
+}
+
+/* ---------- Delete confirm ---------- */
+.stitch-shell--delete .paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
+.stitch-shell--delete .torn-edge {
+  clip-path: polygon(
+    0% 2%,
+    5% 0%,
+    10% 3%,
+    15% 1%,
+    20% 4%,
+    25% 2%,
+    30% 5%,
+    35% 3%,
+    40% 6%,
+    45% 4%,
+    50% 7%,
+    55% 5%,
+    60% 8%,
+    65% 6%,
+    70% 9%,
+    75% 7%,
+    80% 10%,
+    85% 8%,
+    90% 11%,
+    95% 9%,
+    100% 12%,
+    100% 100%,
+    0% 100%
+  );
+}
+.stitch-shell--delete .hand-drawn-border {
+  border: 2px solid #747967;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+.stitch-shell--delete .wavy-footer {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23000' fill-opacity='1' d='M0,192L48,197.3C96,203,192,213,288,192C384,171,480,117,576,117.3C672,117,768,171,864,197.3C960,224,1056,224,1152,202.7C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: bottom;
+}
