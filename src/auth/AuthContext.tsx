@@ -8,6 +8,7 @@ type AuthContextValue = {
   nickname: string | null
   loading: boolean
   signOut: () => Promise<void>
+  /** 从 `user_profiles` 重新拉取当前用户昵称（修改昵称后调用） */
   refreshProfile: () => Promise<void>
 }
 
@@ -52,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setNickname(null)
   }, [])
 
+  const refreshProfile = useCallback(async () => {
+    await loadNickname(session?.user.id)
+  }, [loadNickname, session?.user.id])
+
   const value = useMemo(
     () => ({
       session,
@@ -59,9 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       nickname,
       loading,
       signOut,
-      refreshProfile: () => loadNickname(session?.user.id),
+      refreshProfile,
     }),
-    [session, nickname, loading, signOut, loadNickname],
+    [session, nickname, loading, signOut, refreshProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

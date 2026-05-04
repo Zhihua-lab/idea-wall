@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { InspirationCard } from '../components/InspirationCard'
 import { useAuth } from '../auth/AuthContext'
-import { formatRelativeTime } from '../lib/formatRelativeTime'
 import {
   deleteLike,
   fetchInspirationsList,
@@ -9,19 +9,8 @@ import {
   insertLike,
 } from '../lib/inspirationsApi'
 import { LIST_CARD_VARIANTS } from '../lib/listCardVariants'
-import { moodIconForStored } from '../lib/moodUi'
 import { PRESET_TAGS } from '../lib/presetTags'
 import type { InspirationWithAuthor } from '../types/database'
-
-function previewBody(body: string, max = 100): string {
-  const t = body.replace(/\s+/g, ' ').trim()
-  return t.length <= max ? t : `${t.slice(0, max)}…`
-}
-
-function nicknameInitial(nickname: string): string {
-  const c = nickname.trim().charAt(0)
-  return c || '?'
-}
 
 export function HomePage() {
   const { user, nickname, loading: authLoading, signOut } = useAuth()
@@ -54,7 +43,7 @@ export function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [activeTag, user])
+  }, [activeTag, user, nickname])
 
   useEffect(() => {
     void load()
@@ -153,9 +142,21 @@ export function HomePage() {
                 >
                   Write Inspiration
                 </Link>
-                <span className="text-label-sm text-stone-600 max-w-[120px] truncate" title={nickname ?? undefined}>
+                <span className="max-w-[120px] truncate text-label-sm text-stone-600" title={nickname ?? undefined}>
                   {nickname ?? user.email}
                 </span>
+                <Link
+                  to="/settings"
+                  className="text-label-sm text-primary underline decoration-dotted hover:opacity-90"
+                >
+                  个人设置
+                </Link>
+                <Link
+                  to={`/profile/${user.id}`}
+                  className="text-label-sm text-primary underline decoration-dotted hover:opacity-90"
+                >
+                  我的主页
+                </Link>
                 <button
                   type="button"
                   onClick={() => void signOut()}
@@ -231,6 +232,20 @@ export function HomePage() {
                       {nickname ?? user.email}
                     </span>
                     <Link
+                      to="/settings"
+                      onClick={closeMobileNav}
+                      className="text-label-sm text-primary underline decoration-dotted"
+                    >
+                      个人设置
+                    </Link>
+                    <Link
+                      to={`/profile/${user.id}`}
+                      onClick={closeMobileNav}
+                      className="text-label-sm text-primary underline decoration-dotted"
+                    >
+                      我的主页
+                    </Link>
+                    <Link
                       to="/new"
                       onClick={closeMobileNav}
                       className="bg-primary px-4 py-3 text-center text-on-primary hand-drawn-oval text-label-sm font-bold"
@@ -299,55 +314,18 @@ export function HomePage() {
           ) : rows.length === 0 ? (
             <p className="text-center text-outline font-headline-md">还没有灵感，登录后写一条吧 ✨</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
               {rows.map((item, index) => {
                 const v = LIST_CARD_VARIANTS[index % LIST_CARD_VARIANTS.length]!
-                const firstTag = item.tags[0]
-                const rel = formatRelativeTime(item.created_at)
-                const icon = moodIconForStored(item.mood)
-                const liked = likedIds.has(item.id)
-                const likeDisabled = !user
                 return (
-                  <article key={item.id} className={`inspiration-card ${v.cardArticleClass}`}>
-                    <div className={v.washiTapeClass} />
-                    <div className={v.innerCardClass}>
-                      <Link to={`/inspiration/${item.id}`} className="block text-inherit no-underline">
-                        <div className="flex justify-between items-start mb-4">
-                          <span className={`tag-pill ${v.primaryTagClass}`}>
-                            {firstTag ? `#${firstTag}` : '#未分类'}
-                          </span>
-                          <span className="text-label-sm text-outline italic">{rel}</span>
-                        </div>
-                        <h3 className="font-headline-md text-headline-md mb-3 text-on-surface">{item.title}</h3>
-                        <p className="text-body-md text-on-surface-variant mb-6 line-clamp-3">{previewBody(item.body)}</p>
-                      </Link>
-                      <div className="flex items-center justify-between border-t border-dashed border-outline-variant pt-4">
-                        <Link to={`/inspiration/${item.id}`} className="flex items-center gap-2 text-inherit no-underline min-w-0">
-                          <div
-                            className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center font-bold text-xs ${v.authorAvatarClass}`}
-                          >
-                            {nicknameInitial(item.nickname)}
-                          </div>
-                          <span className="text-label-sm font-semibold truncate">{item.nickname}</span>
-                        </Link>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="material-symbols-outlined text-primary text-lg">{icon}</span>
-                          <button
-                            type="button"
-                            onClick={(e) => void onToggleLike(e, item.id)}
-                            className={`material-symbols-outlined hover:scale-125 transition-transform bg-transparent border-0 p-0 cursor-pointer ${
-                              likeDisabled ? 'text-stone-400 cursor-pointer' : 'text-error'
-                            }`}
-                            style={liked && user ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                            aria-label={user ? (liked ? '取消点赞' : '点赞') : '登录后点赞'}
-                          >
-                            favorite
-                          </button>
-                          <span className="text-label-sm font-semibold text-on-surface-variant">{item.likes_count}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
+                  <InspirationCard
+                    key={item.id}
+                    item={item}
+                    variant={v}
+                    liked={likedIds.has(item.id)}
+                    user={user}
+                    onToggleLike={onToggleLike}
+                  />
                 )
               })}
             </div>

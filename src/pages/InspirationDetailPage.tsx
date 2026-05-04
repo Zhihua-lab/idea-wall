@@ -42,7 +42,7 @@ function isEdited(row: InspirationWithAuthor): boolean {
 export function InspirationDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading, signOut, nickname: authNickname } = useAuth()
 
   const [row, setRow] = useState<InspirationWithAuthor | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,7 +68,7 @@ export function InspirationDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [id, user])
+  }, [id, user, authNickname])
 
   useEffect(() => {
     void load()
@@ -161,7 +161,15 @@ export function InspirationDetailPage() {
                 <div className="flex flex-wrap items-center gap-md mt-md text-on-surface-variant font-label-sm">
                   <div className="flex items-center gap-xs">
                     <span className="material-symbols-outlined text-sm">edit_note</span>
-                    <span>作者：{row.nickname}</span>
+                    <span>
+                      作者：
+                      <Link
+                        to={`/profile/${row.user_id}`}
+                        className="font-medium text-primary underline decoration-wavy hover:opacity-90"
+                      >
+                        {row.nickname}
+                      </Link>
+                    </span>
                   </div>
                   <div className="flex items-center gap-xs">
                     <span className="material-symbols-outlined text-sm">calendar_today</span>

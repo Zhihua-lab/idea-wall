@@ -33,6 +33,62 @@ export async function fetchInspirationsList(tag?: string | null): Promise<Inspir
   }))
 }
 
+const PROFILE_INSPIRATION_LIMIT = 100
+
+/** 某用户发布的灵感（倒序），可选标签筛选；用于个人主页。 */
+export async function fetchInspirationsByUserId(
+  userId: string,
+  tag?: string | null,
+): Promise<InspirationWithAuthor[]> {
+  let q = supabase
+    .from('inspirations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(PROFILE_INSPIRATION_LIMIT)
+
+  if (tag) {
+    q = q.contains('tags', [tag])
+  }
+
+  const { data: rows, error } = await q
+  if (error) throw error
+  const list = (rows ?? []) as InspirationRow[]
+  if (list.length === 0) return []
+
+  const nickMap = await fetchProfilesByUserIds([userId])
+  const nickname = nickMap.get(userId) ?? '用户'
+
+  return list.map((r) => ({
+    ...r,
+    nickname,
+  }))
+}
+
+export async function fetchUserInspirationStats(userId: string): Promise<{ count: number; earliestAt: string | null }> {
+  const { count, error: cErr } = await supabase
+    .from('inspirations')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  if (cErr) throw cErr
+
+  const { data: first, error: fErr } = await supabase
+    .from('inspirations')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (fErr) throw fErr
+
+  return {
+    count: count ?? 0,
+    earliestAt: (first as { created_at?: string } | null)?.created_at ?? null,
+  }
+}
+
 export async function fetchInspirationById(id: string): Promise<InspirationWithAuthor | null> {
   const { data, error } = await supabase.from('inspirations').select('*').eq('id', id).maybeSingle()
   if (error) throw error
