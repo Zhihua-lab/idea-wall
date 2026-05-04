@@ -33,6 +33,7 @@ export function HomePage() {
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,6 +59,24 @@ export function HomePage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [mobileNavOpen])
+
+  const closeMobileNav = () => setMobileNavOpen(false)
+
+  const loginHref = `/login?redirect=${encodeURIComponent(`/?${searchParams.toString()}`)}`
 
   const setTagFilter = (tag: string) => {
     if (!tag) {
@@ -101,7 +120,11 @@ export function HomePage() {
   return (
     <div className="stitch-shell stitch-shell--home bg-surface font-body-md text-on-surface min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container">
       <div className="grain-texture" />
-      <header className="bg-orange-50 dark:bg-stone-900 shadow-[2px_2px_0px_rgba(0,0,0,0.05)] sticky top-0 z-50 border-b-2 border-dashed border-stone-300 dark:border-stone-700 flex justify-between items-center w-full px-6 py-4">
+      <header
+        className={`bg-orange-50 dark:bg-stone-900 shadow-[2px_2px_0px_rgba(0,0,0,0.05)] sticky top-0 border-b-2 border-dashed border-stone-300 dark:border-stone-700 flex justify-between items-center w-full px-6 py-4 ${
+          mobileNavOpen ? 'z-[60]' : 'z-50'
+        }`}
+      >
         <div className="flex items-center gap-2">
           <Link
             to="/"
@@ -151,10 +174,96 @@ export function HomePage() {
             ) : null}
           </div>
         </div>
-        <button type="button" className="md:hidden material-symbols-outlined text-primary">
-          menu
+        <button
+          type="button"
+          className="md:hidden material-symbols-outlined text-primary p-2 -mr-2 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+          aria-expanded={mobileNavOpen}
+          aria-controls="home-mobile-nav"
+          aria-label={mobileNavOpen ? '关闭菜单' : '打开菜单'}
+          onClick={() => setMobileNavOpen((o) => !o)}
+        >
+          {mobileNavOpen ? 'close' : 'menu'}
         </button>
       </header>
+
+      {mobileNavOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="关闭菜单"
+            className="fixed inset-0 z-40 bg-black/45 md:hidden"
+            onClick={closeMobileNav}
+          />
+          <aside
+            id="home-mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label="站点菜单"
+            className="fixed right-0 top-0 z-50 flex h-full min-h-0 w-[min(88vw,300px)] flex-col border-l-2 border-dashed border-stone-300 bg-orange-50 shadow-[ -4px_0_12px_rgba(0,0,0,0.08)] dark:border-stone-700 dark:bg-stone-900 md:hidden"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-dashed border-stone-300 px-4 py-4 dark:border-stone-600">
+              <span className="font-serif text-lg font-bold italic tracking-tight text-lime-900 dark:text-lime-100">
+                菜单
+              </span>
+              <button
+                type="button"
+                aria-label="关闭"
+                className="material-symbols-outlined rounded-md p-2 text-primary hover:bg-black/5 dark:hover:bg-white/10"
+                onClick={closeMobileNav}
+              >
+                close
+              </button>
+            </div>
+            <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6 font-serif">
+              <Link
+                to="/"
+                onClick={closeMobileNav}
+                className="text-lime-800 underline decoration-wavy dark:text-lime-200"
+              >
+                Latest
+              </Link>
+              <span className="text-stone-500 dark:text-stone-400">My Journal（敬请期待）</span>
+              <span className="text-stone-500 dark:text-stone-400">Collections（敬请期待）</span>
+              <div className="mt-auto border-t border-dashed border-stone-300 pt-6 dark:border-stone-600">
+                {!authLoading && user ? (
+                  <div className="flex flex-col gap-4">
+                    <span className="truncate text-label-sm text-stone-600 dark:text-stone-300" title={nickname ?? undefined}>
+                      {nickname ?? user.email}
+                    </span>
+                    <Link
+                      to="/new"
+                      onClick={closeMobileNav}
+                      className="bg-primary px-4 py-3 text-center text-on-primary hand-drawn-oval text-label-sm font-bold"
+                    >
+                      Write Inspiration
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void signOut()
+                        closeMobileNav()
+                      }}
+                      className="text-left text-label-sm text-stone-600 underline decoration-dotted dark:text-stone-300"
+                    >
+                      退出
+                    </button>
+                  </div>
+                ) : !authLoading ? (
+                  <Link
+                    to={loginHref}
+                    onClick={closeMobileNav}
+                    className="inline-block text-label-sm font-bold text-primary underline decoration-wavy"
+                  >
+                    登录 / 注册
+                  </Link>
+                ) : (
+                  <span className="text-outline text-label-sm">加载中…</span>
+                )}
+              </div>
+            </nav>
+          </aside>
+        </>
+      ) : null}
 
       <main className="flex-grow notebook-lines pt-12 pb-24 px-margin-page">
         <div className="max-w-[1200px] mx-auto">
