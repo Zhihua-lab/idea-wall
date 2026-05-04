@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { InspirationCard } from '../components/InspirationCard'
+import { UserAccountDropdown } from '../components/UserAccountDropdown'
 import { useAuth } from '../auth/AuthContext'
 import {
   deleteLike,
@@ -122,48 +123,27 @@ export function HomePage() {
             灵感随手记
           </Link>
         </div>
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden flex-1 items-center justify-end gap-6 md:flex">
           <nav className="flex gap-4">
             <Link
               to="/"
-              className="text-lime-700 dark:text-lime-300 underline decoration-wavy font-serif italic tracking-tight hover:rotate-1 hover:scale-105 transition-all"
+              className="font-serif italic tracking-tight text-lime-700 underline decoration-wavy transition-all hover:rotate-1 hover:scale-105 dark:text-lime-300"
             >
               Latest
             </Link>
-            <span className="text-stone-600 dark:text-stone-400 font-serif italic tracking-tight">My Journal</span>
-            <span className="text-stone-600 dark:text-stone-400 font-serif italic tracking-tight">Collections</span>
+            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">My Journal</span>
+            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">Collections</span>
           </nav>
-          <div className="flex items-center gap-3 border-l border-stone-300 pl-6">
+          <div className="flex items-center gap-4 border-l border-stone-300 pl-6 dark:border-stone-600">
             {!authLoading && user ? (
               <>
                 <Link
                   to="/new"
-                  className="bg-primary px-4 py-2 text-on-primary hand-drawn-oval text-label-sm font-bold hover:rotate-1 hover:scale-105 transition-all active:rotate-[-1deg] active:scale-95 inline-block text-center"
+                  className="inline-block bg-primary px-4 py-2 text-center text-label-sm font-bold text-on-primary hand-drawn-oval transition-all hover:rotate-1 hover:scale-105 active:rotate-[-1deg] active:scale-95"
                 >
                   Write Inspiration
                 </Link>
-                <span className="max-w-[120px] truncate text-label-sm text-stone-600" title={nickname ?? undefined}>
-                  {nickname ?? user.email}
-                </span>
-                <Link
-                  to="/settings"
-                  className="text-label-sm text-primary underline decoration-dotted hover:opacity-90"
-                >
-                  个人设置
-                </Link>
-                <Link
-                  to={`/profile/${user.id}`}
-                  className="text-label-sm text-primary underline decoration-dotted hover:opacity-90"
-                >
-                  我的主页
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void signOut()}
-                  className="text-label-sm text-stone-600 underline decoration-dotted"
-                >
-                  退出
-                </button>
+                <UserAccountDropdown user={user} nickname={nickname} signOut={signOut} />
               </>
             ) : !authLoading ? (
               <Link
@@ -175,16 +155,34 @@ export function HomePage() {
             ) : null}
           </div>
         </div>
-        <button
-          type="button"
-          className="md:hidden material-symbols-outlined text-primary p-2 -mr-2 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
-          aria-expanded={mobileNavOpen}
-          aria-controls="home-mobile-nav"
-          aria-label={mobileNavOpen ? '关闭菜单' : '打开菜单'}
-          onClick={() => setMobileNavOpen((o) => !o)}
-        >
-          {mobileNavOpen ? 'close' : 'menu'}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          {!authLoading && user ? (
+            <UserAccountDropdown
+              user={user}
+              nickname={nickname}
+              signOut={signOut}
+              menuAlign="right"
+              onItemClick={closeMobileNav}
+            />
+          ) : !authLoading ? (
+            <Link
+              to={loginHref}
+              className="rounded-full border-2 border-dashed border-primary/50 px-3 py-1.5 text-label-sm font-bold text-primary"
+            >
+              登录
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            className="-mr-2 rounded-md p-2 text-primary hover:bg-black/5 dark:hover:bg-white/10 material-symbols-outlined"
+            aria-expanded={mobileNavOpen}
+            aria-controls="home-mobile-nav"
+            aria-label={mobileNavOpen ? '关闭菜单' : '打开菜单'}
+            onClick={() => setMobileNavOpen((o) => !o)}
+          >
+            {mobileNavOpen ? 'close' : 'menu'}
+          </button>
+        </div>
       </header>
 
       {mobileNavOpen ? (
@@ -227,42 +225,13 @@ export function HomePage() {
               <span className="text-stone-500 dark:text-stone-400">Collections（敬请期待）</span>
               <div className="mt-auto border-t border-dashed border-stone-300 pt-6 dark:border-stone-600">
                 {!authLoading && user ? (
-                  <div className="flex flex-col gap-4">
-                    <span className="truncate text-label-sm text-stone-600 dark:text-stone-300" title={nickname ?? undefined}>
-                      {nickname ?? user.email}
-                    </span>
-                    <Link
-                      to="/settings"
-                      onClick={closeMobileNav}
-                      className="text-label-sm text-primary underline decoration-dotted"
-                    >
-                      个人设置
-                    </Link>
-                    <Link
-                      to={`/profile/${user.id}`}
-                      onClick={closeMobileNav}
-                      className="text-label-sm text-primary underline decoration-dotted"
-                    >
-                      我的主页
-                    </Link>
-                    <Link
-                      to="/new"
-                      onClick={closeMobileNav}
-                      className="bg-primary px-4 py-3 text-center text-on-primary hand-drawn-oval text-label-sm font-bold"
-                    >
-                      Write Inspiration
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void signOut()
-                        closeMobileNav()
-                      }}
-                      className="text-left text-label-sm text-stone-600 underline decoration-dotted dark:text-stone-300"
-                    >
-                      退出
-                    </button>
-                  </div>
+                  <Link
+                    to="/new"
+                    onClick={closeMobileNav}
+                    className="bg-primary px-4 py-3 text-center text-on-primary hand-drawn-oval text-label-sm font-bold"
+                  >
+                    Write Inspiration
+                  </Link>
                 ) : !authLoading ? (
                   <Link
                     to={loginHref}

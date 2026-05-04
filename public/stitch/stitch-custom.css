@@ -198,3 +198,50 @@
   mask-repeat: no-repeat;
   mask-position: bottom;
 }
+
+/* ---------- Header user menu（便签 / 横线纸感，无整圈虚线） ---------- */
+.user-account-trigger-paper {
+  background-color: rgba(255, 248, 243, 0.92);
+  background-image: linear-gradient(rgba(116, 121, 103, 0.06) 1px, transparent 1px);
+  background-size: 100% 1.65rem;
+  box-shadow:
+    2px 3px 0 rgba(0, 0, 0, 0.06),
+    inset 0 0 0 1px rgba(200, 188, 175, 0.4);
+}
+.user-account-trigger-paper:hover {
+  background-color: #fff9f2;
+  box-shadow:
+    3px 4px 0 rgba(0, 0, 0, 0.07),
+    inset 0 0 0 1px rgba(175, 165, 152, 0.5);
+}
+.dark .user-account-trigger-paper {
+  background-color: rgba(42, 38, 34, 0.95);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 100% 1.65rem;
+  box-shadow:
+    2px 3px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(110, 100, 92, 0.45);
+}
+.dark .user-account-trigger-paper:hover {
+  background-color: rgba(48, 44, 40, 0.98);
+  box-shadow:
+    3px 4px 0 rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(130, 120, 110, 0.5);
+}
+
+.user-account-menu-paper {
+  background-color: #faf4eb;
+  background-image: linear-gradient(rgba(116, 121, 103, 0.12) 1px, transparent 1px);
+  background-size: 100% 2.25rem;
+  box-shadow:
+    3px 5px 0 rgba(0, 0, 0, 0.07),
+    inset 0 0 0 1px rgba(210, 198, 182, 0.55);
+}
+.dark .user-account-menu-paper {
+  background-color: #2c2824;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 100% 2.25rem;
+  box-shadow:
+    3px 5px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(95, 88, 80, 0.5);
+}

@@ -149,12 +149,6 @@ export function ProfilePage() {
 
       <main className="notebook-lines flex-grow px-margin-page pb-24 pt-12">
         <div className="mx-auto max-w-[1200px]">
-          {isSelf ? (
-            <p className="mb-6 rounded-lg border border-dashed border-primary-container bg-primary-container/10 px-4 py-3 text-center text-body-md text-primary">
-              这是你的灵感空间
-            </p>
-          ) : null}
-
           {loading ? <p className="text-center text-outline">加载中…</p> : null}
           {error ? <p className="mb-6 text-center text-error">{error}</p> : null}
 
