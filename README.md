@@ -9,6 +9,8 @@ Vite + React + TypeScript + React Router + **Supabase**。Stitch 的 Tailwind �
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+生产构建（如 Vercel）默认通过 **`/api/supabase-proxy`** 转发 REST/Auth 到 Supabase，浏览器不再直连 `*.supabase.co`，便于分流代理/VPN 场景。仅在本地执行 `vite preview` 且需要直连时，可在 `.env` 中设置 `VITE_USE_SUPABASE_EDGE_PROXY=0`。
+
 不要将 `.env` 提交到 Git（已在 `.gitignore` 中忽略）。
 
 ## 本地运行
