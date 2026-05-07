@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { fetchInspirationById } from '../lib/inspirationsApi'
 import {
+  cloneFileForUpload,
   displayUrlForInspirationImage,
   normalizeInspirationImages,
   removeInspirationImagesFromStorage,
@@ -60,6 +61,10 @@ export function WriteInspirationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingRef = useRef(pendingImages)
   pendingRef.current = pendingImages
+  const remoteUrlsRef = useRef(remoteImageUrls)
+  remoteUrlsRef.current = remoteImageUrls
+  const pendingImagesRef = useRef(pendingImages)
+  pendingImagesRef.current = pendingImages
 
   const tagHistory = useMemo(() => (user ? readTagHistory(user.id) : []), [user])
   const imageSlotCount = remoteImageUrls.length + pendingImages.length
@@ -174,28 +179,50 @@ export function WriteInspirationPage() {
   }
 
   const onImageFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = [...(e.target.files ?? [])]
-    e.target.value = ''
-    if (list.length === 0) return
-    setPendingImages((prevPending) => {
-      let cur = remoteImageUrls.length + prevPending.length
-      const toAdd: PendingImage[] = []
-      for (const file of list) {
-        if (cur >= 3) {
-          setError('最多只能添加 3 张图片')
-          break
+    void (async () => {
+      const raw = e.target.files
+      const list = raw ? Array.from(raw) : []
+      if (list.length === 0) return
+
+      const prepared: PendingImage[] = []
+      try {
+        for (const file of list) {
+          const msg = validateImageFile(file)
+          if (msg) {
+            setError(msg)
+            continue
+          }
+          try {
+            const stable = await cloneFileForUpload(file)
+            prepared.push({ file: stable, preview: URL.createObjectURL(stable) })
+          } catch {
+            setError('无法读取某张图片，请换一张或压缩后重试')
+          }
         }
-        const msg = validateImageFile(file)
-        if (msg) {
-          setError(msg)
-          continue
-        }
-        toAdd.push({ file, preview: URL.createObjectURL(file) })
-        cur += 1
+      } catch {
+        setError('读取相册文件失败，请重试')
       }
-      if (toAdd.length > 0) setError(null)
-      return [...prevPending, ...toAdd]
-    })
+
+      e.target.value = ''
+
+      if (prepared.length === 0) return
+
+      setPendingImages((prevPending) => {
+        let cur = remoteUrlsRef.current.length + prevPending.length
+        const toAdd: PendingImage[] = []
+        for (const p of prepared) {
+          if (cur >= 3) {
+            setError('最多只能添加 3 张图片')
+            revokePendingPreview(p)
+            break
+          }
+          toAdd.push(p)
+          cur += 1
+        }
+        if (toAdd.length > 0) setError(null)
+        return [...prevPending, ...toAdd]
+      })
+    })()
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -215,8 +242,9 @@ export function WriteInspirationPage() {
             return
           }
         }
+        const uploadQueue = [...pendingImagesRef.current]
         const uploaded: string[] = []
-        for (const p of pendingImages) {
+        for (const p of uploadQueue) {
           uploaded.push(await uploadInspirationImage(user.id, editId, p.file))
         }
         const finalImages = [...remoteImageUrls, ...uploaded].slice(0, 3)
@@ -232,7 +260,7 @@ export function WriteInspirationPage() {
           .eq('id', editId)
           .eq('user_id', user.id)
         if (err) throw err
-        pendingImages.forEach(revokePendingPreview)
+        uploadQueue.forEach(revokePendingPreview)
         setPendingImages([])
         setRemovedRemoteUrls([])
         void refreshProfile()
@@ -254,9 +282,10 @@ export function WriteInspirationPage() {
 
       if (err) throw err
       const newId = data?.id as string
-      if (pendingImages.length > 0) {
+      const uploadQueue = [...pendingImagesRef.current]
+      if (uploadQueue.length > 0) {
         const uploaded: string[] = []
-        for (const p of pendingImages) {
+        for (const p of uploadQueue) {
           uploaded.push(await uploadInspirationImage(user.id, newId, p.file))
         }
         const { error: upErr } = await supabase
@@ -265,7 +294,7 @@ export function WriteInspirationPage() {
           .eq('id', newId)
         if (upErr) throw upErr
       }
-      pendingImages.forEach(revokePendingPreview)
+      uploadQueue.forEach(revokePendingPreview)
       setPendingImages([])
       void refreshProfile()
       navigate(`/inspiration/${newId}`, { replace: true })

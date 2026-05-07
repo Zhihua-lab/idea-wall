@@ -63,6 +63,18 @@ export function validateImageFile(file: File): string | null {
   return null
 }
 
+/**
+ * 移动端（尤其 iOS）在清空 file input 后，原 FileList 里的引用可能失效或异常；
+ * 上传前读入内存并 new File，避免「多选只成功传一张」。
+ */
+export async function cloneFileForUpload(file: File): Promise<File> {
+  const buf = await file.arrayBuffer()
+  return new File([buf], file.name, {
+    type: file.type || 'application/octet-stream',
+    lastModified: file.lastModified,
+  })
+}
+
 function pickExtension(file: File): string {
   if (file.type === 'image/png') return '.png'
   if (file.type === 'image/webp') return '.webp'
