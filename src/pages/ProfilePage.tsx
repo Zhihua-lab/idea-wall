@@ -94,11 +94,22 @@ export function ProfilePage() {
           n.delete(inspirationId)
           return n
         })
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === inspirationId
+              ? { ...r, likes_count: Math.max(0, r.likes_count - 1) }
+              : r,
+          ),
+        )
       } else {
         await insertLike(user.id, inspirationId)
         setLikedIds((prev) => new Set(prev).add(inspirationId))
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === inspirationId ? { ...r, likes_count: r.likes_count + 1 } : r,
+          ),
+        )
       }
-      await load()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '点赞失败')
     }

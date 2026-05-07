@@ -229,12 +229,12 @@ export function WriteInspirationPage() {
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto px-margin-page py-xl max-w-4xl relative">
+      <main className="relative container mx-auto max-w-4xl flex-grow px-margin-page py-xl pb-[max(2rem,env(safe-area-inset-bottom,0px))]">
         <div className="absolute -left-12 top-24 opacity-20 hidden lg:block select-none pointer-events-none">
           <span className="material-symbols-outlined text-[120px] text-primary">potted_plant</span>
         </div>
 
-        <div className="relative bg-surface-container-lowest shadow-xl rounded-lg p-md md:p-xl rotate-1 folded-corner border border-outline-variant min-h-[800px] flex flex-col">
+        <div className="relative flex min-h-0 flex-col rounded-lg border border-outline-variant bg-surface-container-lowest p-md shadow-xl md:min-h-[720px] md:p-xl rotate-1 folded-corner">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-48 h-10 washi-tape shadow-sm z-10" />
 
           <div className="mb-lg border-b-2 border-dashed border-outline-variant pb-md">
@@ -379,32 +379,32 @@ export function WriteInspirationPage() {
               </div>
             </div>
 
-            <div className="pt-lg flex items-center justify-between">
-              <div className="flex gap-4">
-                <div className="w-24 h-24 rotate-[-6deg] sketchy-border overflow-hidden bg-white shadow-md p-1">
+            <div className="flex flex-col gap-6 pt-lg sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex shrink-0 justify-center gap-4 sm:justify-start">
+                <div className="h-24 w-24 rotate-[-6deg] overflow-hidden bg-white p-1 shadow-md sketchy-border">
                   <img
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkQRfg5OIx5ZFWCGnLIhMS1tjjm-8i3PHCA9Ew8Ej1eVYOseIpoJALNLXwhqFV5w0HfppsiVGPvoW3C8t3v2onHwilCHRoiJZZtp9Haua4wgKCtK5tiEKbUC5ZEPN_XRY-fvbKom8viVZ2xAn-Rh5Xlpn2wum-3nHESWL9StNTEMrovoH0nAbFxa9tATYNA8m2HuWvmDiO_bfTVG0XEYT0qe_4Qodvmyhm26E1z9cqYoZTgKht0qceAtOtMIP1XxfnL82iGJ2o2r8"
                   />
                 </div>
-                <div className="w-24 h-24 rotate-[8deg] sketchy-border overflow-hidden bg-white shadow-md p-1">
+                <div className="h-24 w-24 rotate-[8deg] overflow-hidden bg-white p-1 shadow-md sketchy-border">
                   <img
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuChLZstqi6S4X8dGnKXiRkmNTah42c8Jz66HHOFRkoks46Q2dcmaPp3yHQ8ssqszKFpPGD2mZeLJ6Gih3Umc3oFN0an5-oXccoMff8zWYX66VxUTwrGqelKPQYKtOGQ3beKRLOjTI__8m_SRsCkj94ZTfk8htaMmOBE3Ya-nYfcdc85PPvt4K0JlbSdHZZsyL3nTE5E9k0ZFivX5aOapfT755950EIxs1CcFAVWcNw83q8ako1-XBCU66oEqaLZVMHXgQ05hM0e41A"
                   />
                 </div>
               </div>
-              <div className="flex gap-md">
+              <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:flex-none sm:gap-md">
                 <Link
                   to={isEdit && editId ? `/inspiration/${editId}` : '/'}
-                  className="font-headline-md text-headline-md text-secondary border-2 border-dashed border-outline-variant px-xl py-base rounded-lg hover:bg-surface-dim transition-all active:scale-95 inline-flex items-center justify-center"
+                  className="inline-flex w-full items-center justify-center rounded-lg border-2 border-dashed border-outline-variant px-xl py-base text-center font-headline-md text-headline-md text-secondary transition-all hover:bg-surface-dim active:scale-95 sm:w-auto"
                 >
                   取消
                 </Link>
                 <button
-                  className="font-headline-md text-headline-md text-white bg-primary px-xl py-base hand-oval shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all active:translate-y-0 flex items-center gap-2 disabled:opacity-50"
+                  className="hand-oval inline-flex w-full items-center justify-center gap-2 bg-primary px-xl py-base text-center font-headline-md text-headline-md text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl active:translate-y-0 disabled:opacity-50 sm:w-auto"
                   type="submit"
                   disabled={submitting || !canSubmit}
                 >
@@ -415,7 +415,7 @@ export function WriteInspirationPage() {
             </div>
           </form>
 
-          <div className="absolute bottom-4 right-4 text-outline-variant select-none">
+          <div className="absolute bottom-4 right-4 hidden text-outline-variant select-none sm:block">
             <span className="material-symbols-outlined text-4xl">eco</span>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { LikeHeartIcon } from '../components/LikeHeartIcon'
 import {
   deleteLike,
   fetchInspirationById,
@@ -85,12 +86,14 @@ export function InspirationDetailPage() {
       if (liked) {
         await deleteLike(user.id, row.id)
         setLiked(false)
+        setRow((r) =>
+          r ? { ...r, likes_count: Math.max(0, r.likes_count - 1) } : r,
+        )
       } else {
         await insertLike(user.id, row.id)
         setLiked(true)
+        setRow((r) => (r ? { ...r, likes_count: r.likes_count + 1 } : r))
       }
-      const next = await fetchInspirationById(row.id)
-      setRow(next)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '点赞失败')
     } finally {
@@ -99,6 +102,8 @@ export function InspirationDetailPage() {
   }
 
   const isAuthor = Boolean(user && row && user.id === row.user_id)
+
+  const heartFilled = Boolean(user && liked)
 
   return (
     <div className="stitch-shell stitch-shell--detail paper-texture min-h-screen font-body-md text-on-surface selection:bg-primary-container selection:text-white">
@@ -218,15 +223,29 @@ export function InspirationDetailPage() {
                     disabled={likeBusy}
                     className="group flex flex-col items-center gap-1 transition-all bg-transparent border-0 cursor-pointer disabled:opacity-50"
                   >
-                    <div className="p-4 bg-tertiary-container/10 rounded-full wobbly-border group-hover:scale-110 group-active:scale-90 transition-transform">
-                      <span
-                        className={`material-symbols-outlined text-tertiary text-4xl ${!user ? 'opacity-40' : ''}`}
-                        style={liked && user ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                      >
-                        favorite
-                      </span>
+                    <div
+                      className={`rounded-full p-4 wobbly-border transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 ${
+                        !user
+                          ? 'bg-surface-container-high text-on-surface-variant'
+                          : heartFilled
+                            ? 'bg-[#fde8ea]/95 text-[#ba5f68]'
+                            : 'bg-[#fdf3f4]/95 text-[#c9959a]'
+                      }`}
+                    >
+                      <LikeHeartIcon
+                        filled={heartFilled}
+                        className={`h-9 w-9 shrink-0 transition-transform duration-300 ease-out will-change-transform ${
+                          !user ? 'opacity-45' : ''
+                        } ${user && heartFilled ? 'scale-[1.07]' : 'scale-100'}`}
+                      />
                     </div>
-                    <span className="font-label-sm text-tertiary">{row.likes_count} 个赞</span>
+                    <span
+                      className={`font-label-sm transition-colors duration-200 ${
+                        user && heartFilled ? 'text-[#b05862]' : 'text-on-surface-variant'
+                      }`}
+                    >
+                      {row.likes_count} 个赞
+                    </span>
                   </button>
                   <div className="h-12 w-[1px] bg-outline-variant hidden md:block" />
                   <button type="button" className="group flex flex-col items-center gap-1 transition-all bg-transparent border-0 cursor-default">

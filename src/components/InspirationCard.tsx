@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
+import { LikeHeartIcon } from './LikeHeartIcon'
 import { moodIconForStored } from '../lib/moodUi'
 import { formatRelativeTime } from '../lib/formatRelativeTime'
 import type { InspirationWithAuthor } from '../types/database'
@@ -30,6 +31,7 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
   const rel = formatRelativeTime(item.created_at)
   const icon = moodIconForStored(item.mood)
   const likeDisabled = !user
+  const heartFilled = Boolean(user && liked)
 
   return (
     <article className={`inspiration-card ${v.cardArticleClass}`}>
@@ -61,13 +63,21 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
             <button
               type="button"
               onClick={(e) => void onToggleLike(e, item.id)}
-              className={`material-symbols-outlined cursor-pointer border-0 bg-transparent p-0 transition-transform hover:scale-125 ${
-                likeDisabled ? 'cursor-pointer text-stone-400' : 'text-error'
+              className={`inline-flex cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0.5 transition-transform duration-200 ease-out hover:scale-110 active:scale-95 ${
+                likeDisabled
+                  ? 'cursor-pointer text-stone-400'
+                  : heartFilled
+                    ? 'text-[#ba5f68]'
+                    : 'text-[#c9959a]'
               }`}
-              style={liked && user ? { fontVariationSettings: "'FILL' 1" } : undefined}
               aria-label={user ? (liked ? '取消点赞' : '点赞') : '登录后点赞'}
             >
-              favorite
+              <LikeHeartIcon
+                filled={heartFilled}
+                className={`h-5 w-5 shrink-0 transition-transform duration-300 ease-out will-change-transform ${
+                  user && heartFilled ? 'scale-[1.08]' : 'scale-100'
+                }`}
+              />
             </button>
             <span className="text-label-sm font-semibold text-on-surface-variant">{item.likes_count}</span>
           </div>
