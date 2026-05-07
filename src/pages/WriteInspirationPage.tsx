@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { fetchInspirationById } from '../lib/inspirationsApi'
+import {
+  normalizeInspirationImages,
+  removeInspirationImagesFromStorage,
+  uploadInspirationImage,
+  validateImageFile,
+} from '../lib/inspirationStorage'
 import { supabase } from '../lib/supabaseClient'
 import { PRESET_TAGS } from '../lib/presetTags'
 
 const PRESET_MOODS = ['happy', 'calm', 'excited', 'tired', 'sad', 'anxious', 'other'] as const
 type MoodKey = (typeof PRESET_MOODS)[number]
+
+type PendingImage = { file: File; preview: string }
 
 function tagsStorageKey(userId: string) {
   return `user_${userId}_tags`
@@ -44,8 +52,16 @@ export function WriteInspirationPage() {
   const [loadingEdit, setLoadingEdit] = useState(isEdit)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [remoteImageUrls, setRemoteImageUrls] = useState<string[]>([])
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+  const [removedRemoteUrls, setRemovedRemoteUrls] = useState<string[]>([])
+  const [imageBusy, setImageBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingRef = useRef(pendingImages)
+  pendingRef.current = pendingImages
 
   const tagHistory = useMemo(() => (user ? readTagHistory(user.id) : []), [user])
+  const imageSlotCount = remoteImageUrls.length + pendingImages.length
 
   const loadEdit = useCallback(async () => {
     if (!editId || !user) return
@@ -73,6 +89,9 @@ export function WriteInspirationPage() {
         setMoodOther(m)
       }
       setSelectedTags((row.tags ?? []).slice(0, 3))
+      setRemoteImageUrls(normalizeInspirationImages(row.images))
+      setPendingImages([])
+      setRemovedRemoteUrls([])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '加载失败')
     } finally {
@@ -83,6 +102,12 @@ export function WriteInspirationPage() {
   useEffect(() => {
     if (isEdit) void loadEdit()
   }, [isEdit, loadEdit])
+
+  useEffect(() => {
+    return () => {
+      pendingRef.current.forEach(revokePendingPreview)
+    }
+  }, [])
 
   const redirectLogin = `/login?redirect=${encodeURIComponent(isEdit && editId ? `/inspiration/${editId}/edit` : '/new')}`
 
@@ -125,14 +150,75 @@ export function WriteInspirationPage() {
     setSelectedTags((prev) => prev.filter((x) => x !== t))
   }
 
+  const revokePendingPreview = (p: PendingImage) => {
+    try {
+      URL.revokeObjectURL(p.preview)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const removeRemoteSlot = (url: string) => {
+    setRemoteImageUrls((prev) => prev.filter((u) => u !== url))
+    setRemovedRemoteUrls((prev) => [...prev, url])
+  }
+
+  const removePendingSlot = (idx: number) => {
+    setPendingImages((prev) => {
+      const next = prev.filter((_, i) => i !== idx)
+      const removed = prev[idx]
+      if (removed) revokePendingPreview(removed)
+      return next
+    })
+  }
+
+  const onImageFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = [...(e.target.files ?? [])]
+    e.target.value = ''
+    if (list.length === 0) return
+    setPendingImages((prevPending) => {
+      let cur = remoteImageUrls.length + prevPending.length
+      const toAdd: PendingImage[] = []
+      for (const file of list) {
+        if (cur >= 3) {
+          setError('最多只能添加 3 张图片')
+          break
+        }
+        const msg = validateImageFile(file)
+        if (msg) {
+          setError(msg)
+          continue
+        }
+        toAdd.push({ file, preview: URL.createObjectURL(file) })
+        cur += 1
+      }
+      if (toAdd.length > 0) setError(null)
+      return [...prevPending, ...toAdd]
+    })
+  }
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !canSubmit) return
     setSubmitting(true)
+    setImageBusy(true)
     setError(null)
     try {
       const moodValue = resolvedMood
       if (isEdit && editId) {
+        if (removedRemoteUrls.length > 0) {
+          try {
+            await removeInspirationImagesFromStorage(removedRemoteUrls)
+          } catch {
+            setError('移除旧图片失败，请稍后重试')
+            return
+          }
+        }
+        const uploaded: string[] = []
+        for (const p of pendingImages) {
+          uploaded.push(await uploadInspirationImage(user.id, editId, p.file))
+        }
+        const finalImages = [...remoteImageUrls, ...uploaded].slice(0, 3)
         const { error: err } = await supabase
           .from('inspirations')
           .update({
@@ -140,10 +226,14 @@ export function WriteInspirationPage() {
             body: body.trim(),
             mood: moodValue,
             tags: selectedTags,
+            images: finalImages.length > 0 ? finalImages : null,
           })
           .eq('id', editId)
           .eq('user_id', user.id)
         if (err) throw err
+        pendingImages.forEach(revokePendingPreview)
+        setPendingImages([])
+        setRemovedRemoteUrls([])
         void refreshProfile()
         navigate(`/inspiration/${editId}`, { replace: true })
         return
@@ -163,12 +253,26 @@ export function WriteInspirationPage() {
 
       if (err) throw err
       const newId = data?.id as string
+      if (pendingImages.length > 0) {
+        const uploaded: string[] = []
+        for (const p of pendingImages) {
+          uploaded.push(await uploadInspirationImage(user.id, newId, p.file))
+        }
+        const { error: upErr } = await supabase
+          .from('inspirations')
+          .update({ images: uploaded.slice(0, 3) })
+          .eq('id', newId)
+        if (upErr) throw upErr
+      }
+      pendingImages.forEach(revokePendingPreview)
+      setPendingImages([])
       void refreshProfile()
       navigate(`/inspiration/${newId}`, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '保存失败')
     } finally {
       setSubmitting(false)
+      setImageBusy(false)
     }
   }
 
@@ -288,6 +392,63 @@ export function WriteInspirationPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-sm rounded-lg border border-dashed border-outline-variant/60 bg-surface-container-low/40 p-md">
+              <label className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined">photo_library</span>
+                配图（最多 3 张，可选）
+              </label>
+              <p className="text-label-sm text-outline">支持 JPG / PNG / WebP，单张不超过 5MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                aria-label="选择配图文件"
+                onChange={onImageFilesSelected}
+              />
+              <div className="flex flex-wrap gap-3">
+                {remoteImageUrls.map((url) => (
+                  <div key={url} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-outline-variant bg-white shadow-sm">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-outline-variant bg-surface-container-high/95 text-on-surface shadow-sm hover:bg-error-container/40"
+                      aria-label="移除图片"
+                      onClick={() => removeRemoteSlot(url)}
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
+                {pendingImages.map((p, idx) => (
+                  <div key={p.preview} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-outline-variant bg-white shadow-sm">
+                    <img src={p.preview} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-outline-variant bg-surface-container-high/95 text-on-surface shadow-sm hover:bg-error-container/40"
+                      aria-label="移除待上传图片"
+                      onClick={() => removePendingSlot(idx)}
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {imageSlotCount < 3 ? (
+                <button
+                  type="button"
+                  disabled={submitting || imageBusy}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-primary/50 px-md py-sm font-label-sm text-primary transition-colors hover:bg-primary-fixed-dim/30 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-lg">add_photo_alternate</span>
+                  选择图片
+                </button>
+              ) : null}
+              {imageBusy ? <p className="text-label-sm text-secondary">正在上传图片，请稍候…</p> : null}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-lg items-start">
@@ -410,10 +571,16 @@ export function WriteInspirationPage() {
                 <button
                   className="hand-oval inline-flex w-full items-center justify-center gap-2 bg-primary px-xl py-base text-center font-headline-md text-headline-md text-white shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl active:translate-y-0 disabled:opacity-50 sm:w-auto"
                   type="submit"
-                  disabled={submitting || !canSubmit}
+                  disabled={submitting || imageBusy || !canSubmit}
                 >
                   <span className="material-symbols-outlined">draw</span>
-                  {submitting ? '保存中…' : isEdit ? '保存修改' : '记录这份灵感'}
+                  {imageBusy
+                    ? '上传图片中…'
+                    : submitting
+                      ? '保存中…'
+                      : isEdit
+                        ? '保存修改'
+                        : '记录这份灵感'}
                 </button>
               </div>
             </div>

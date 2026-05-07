@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { InspirationImageGrid } from '../components/InspirationImageGrid'
+import { InspirationImageLightbox } from '../components/InspirationImageLightbox'
 import { LikeHeartIcon } from '../components/LikeHeartIcon'
 import {
   deleteLike,
@@ -8,6 +10,7 @@ import {
   fetchLikedForUser,
   insertLike,
 } from '../lib/inspirationsApi'
+import { normalizeInspirationImages } from '../lib/inspirationStorage'
 import { moodIconForStored, moodLineForDetail } from '../lib/moodUi'
 import type { InspirationWithAuthor } from '../types/database'
 
@@ -50,6 +53,8 @@ export function InspirationDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [liked, setLiked] = useState(false)
   const [likeBusy, setLikeBusy] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -104,6 +109,8 @@ export function InspirationDetailPage() {
   const isAuthor = Boolean(user && row && user.id === row.user_id)
 
   const heartFilled = Boolean(user && liked)
+
+  const imageUrls = useMemo(() => normalizeInspirationImages(row?.images ?? null), [row?.images])
 
   return (
     <div className="stitch-shell stitch-shell--detail paper-texture min-h-screen font-body-md text-on-surface selection:bg-primary-container selection:text-white">
@@ -203,6 +210,17 @@ export function InspirationDetailPage() {
             <section className="bg-white/40 p-lg wobbly-border space-y-md relative overflow-hidden">
               <div className="font-body-lg text-body-lg leading-relaxed text-on-surface whitespace-pre-wrap">{row.body}</div>
 
+              {imageUrls.length > 0 ? (
+                <InspirationImageGrid
+                  urls={imageUrls}
+                  className="pt-4"
+                  onOpen={(i) => {
+                    setLightboxIndex(i)
+                    setLightboxOpen(true)
+                  }}
+                />
+              ) : null}
+
               <div className="flex flex-wrap gap-2 pt-2">
                 {(row.tags ?? []).map((t) => (
                   <Link
@@ -275,6 +293,19 @@ export function InspirationDetailPage() {
                 ) : null}
               </div>
             </section>
+
+            {row && imageUrls.length > 0 ? (
+              <InspirationImageLightbox
+                open={lightboxOpen}
+                urls={imageUrls}
+                startIndex={lightboxIndex}
+                onClose={() => setLightboxOpen(false)}
+                isAuthor={isAuthor}
+                inspirationId={row.id}
+                userId={user?.id ?? ''}
+                onImagesUpdated={(next) => setRow((r) => (r ? { ...r, images: next } : null))}
+              />
+            ) : null}
           </article>
         ) : null}
 

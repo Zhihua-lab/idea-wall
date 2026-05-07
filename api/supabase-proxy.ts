@@ -1,5 +1,5 @@
 /**
- * Edge proxy: browser → same-origin /api/supabase-proxy → Supabase REST/Auth.
+ * Edge proxy: browser → same-origin /api/supabase-proxy → Supabase REST/Auth/Storage.
  * Avoids direct *.supabase.co from the client (helps split-tunnel VPN / unstable paths).
  *
  * Uses SUPABASE_* env vars first: Vercel Edge may not expose VITE_* at runtime the same
@@ -8,7 +8,11 @@
 export const config = { runtime: 'edge' }
 
 function isAllowedSupabasePath(pathname: string): boolean {
-  return pathname.startsWith('/rest/v1/') || pathname.startsWith('/auth/v1/')
+  return (
+    pathname.startsWith('/rest/v1/') ||
+    pathname.startsWith('/auth/v1/') ||
+    pathname.startsWith('/storage/v1/')
+  )
 }
 
 function supabaseCredentials(): { base: string; anon: string } | null {

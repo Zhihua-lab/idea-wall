@@ -1,3 +1,4 @@
+import { normalizeInspirationImages, removeInspirationImagesFromStorage } from './inspirationStorage'
 import { supabase } from './supabaseClient'
 import type { InspirationRow, InspirationWithAuthor, UserProfileRow } from '../types/database'
 
@@ -138,6 +139,45 @@ export async function deleteLike(userId: string, inspirationId: string): Promise
 }
 
 export async function deleteInspiration(id: string): Promise<void> {
+  const { data, error: selErr } = await supabase.from('inspirations').select('images').eq('id', id).maybeSingle()
+  if (selErr) throw selErr
+  const images = normalizeInspirationImages(data?.images)
   const { error } = await supabase.from('inspirations').delete().eq('id', id)
   if (error) throw error
+  if (images.length > 0) {
+    try {
+      await removeInspirationImagesFromStorage(images)
+    } catch {
+      /* 行已删；存储清理失败不阻塞用户 */
+    }
+  }
+}
+
+/** 作者从详情中删除单张图：先更新 DB，再删 Storage */
+export async function removeOneInspirationImage(
+  inspirationId: string,
+  userId: string,
+  imageUrl: string,
+): Promise<string[]> {
+  const { data, error: selErr } = await supabase
+    .from('inspirations')
+    .select('images')
+    .eq('id', inspirationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (selErr) throw selErr
+  const cur = normalizeInspirationImages(data?.images)
+  const next = cur.filter((u) => u !== imageUrl)
+  const { error: upErr } = await supabase
+    .from('inspirations')
+    .update({ images: next.length > 0 ? next : null })
+    .eq('id', inspirationId)
+    .eq('user_id', userId)
+  if (upErr) throw upErr
+  try {
+    await removeInspirationImagesFromStorage([imageUrl])
+  } catch {
+    /* 已更新 DB */
+  }
+  return next
 }

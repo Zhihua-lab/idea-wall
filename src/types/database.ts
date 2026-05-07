@@ -5,6 +5,8 @@ export type InspirationRow = {
   body: string
   mood: string
   tags: string[]
+  /** 公开图片 URL，最多 3 张；无图时为 null / [] / 缺列(undefined) */
+  images?: string[] | null
   likes_count: number
   created_at: string
   updated_at: string
