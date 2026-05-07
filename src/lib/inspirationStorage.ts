@@ -2,12 +2,58 @@ import { supabase } from './supabaseClient'
 
 export const INSPIRATION_IMAGES_BUCKET = 'inspiration-images'
 
+const supabaseBase = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+
+/**
+ * 生产环境经 Edge 代理访问 API 时，浏览器对 *.supabase.co 的图片直连常被网络/VPN 拦截。
+ * 将「已保存的公开 object URL」改写为同源 `/api/supabase-proxy?p=/storage/v1/...`，由服务端带 apikey 拉取。
+ */
+export function displayUrlForInspirationImage(stored: string): string {
+  if (!stored) return stored
+  if (stored.startsWith('/api/supabase-proxy')) return stored
+
+  let pathname: string
+  try {
+    const u = new URL(stored)
+    if (supabaseBase) {
+      const origin = new URL(supabaseBase).origin
+      if (u.origin !== origin) return stored
+    }
+    pathname = u.pathname
+  } catch {
+    return stored
+  }
+
+  if (!pathname.startsWith('/storage/v1/object/public/')) return stored
+
+  const proxyDisabled = import.meta.env.VITE_USE_SUPABASE_EDGE_PROXY === '0'
+  const useProxy = import.meta.env.PROD && !proxyDisabled && Boolean(supabaseBase)
+  if (useProxy) {
+    return `/api/supabase-proxy?p=${encodeURIComponent(pathname)}`
+  }
+  return stored
+}
+
 const MAX_BYTES = 5 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function normalizeInspirationImages(raw: unknown): string[] {
   if (raw == null) return []
-  if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === 'string' && x.length > 0).slice(0, 3)
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === 'string' && x.length > 0).slice(0, 3)
+  }
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (t.startsWith('[')) {
+      try {
+        const p = JSON.parse(t) as unknown
+        if (Array.isArray(p)) return normalizeInspirationImages(p)
+      } catch {
+        /* ignore */
+      }
+    }
+    if (t.startsWith('http')) return [t].slice(0, 3)
+  }
   return []
 }
 

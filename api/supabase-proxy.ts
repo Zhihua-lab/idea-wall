@@ -96,6 +96,10 @@ export default async function handler(req: Request): Promise<Response> {
 
     const target = `${base}${decoded}`
     const out = buildUpstreamHeaders(req, anon)
+    // 图片等二进制：浏览器 <img> 常不带 Accept；默认 application/json 会导致 Storage 返回异常
+    if (pathname.startsWith('/storage/v1/') && !req.headers.get('accept')) {
+      out.set('accept', '*/*')
+    }
 
     const method = req.method.toUpperCase()
     const hasBody = method !== 'GET' && method !== 'HEAD' && req.body !== null

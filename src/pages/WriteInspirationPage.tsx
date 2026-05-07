@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { fetchInspirationById } from '../lib/inspirationsApi'
 import {
+  displayUrlForInspirationImage,
   normalizeInspirationImages,
   removeInspirationImagesFromStorage,
   uploadInspirationImage,
@@ -412,7 +413,7 @@ export function WriteInspirationPage() {
               <div className="flex flex-wrap gap-3">
                 {remoteImageUrls.map((url) => (
                   <div key={url} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-outline-variant bg-white shadow-sm">
-                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <img src={displayUrlForInspirationImage(url)} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
                       className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-outline-variant bg-surface-container-high/95 text-on-surface shadow-sm hover:bg-error-container/40"

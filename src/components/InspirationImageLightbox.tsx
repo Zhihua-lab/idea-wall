@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { removeOneInspirationImage } from '../lib/inspirationsApi'
+import { displayUrlForInspirationImage } from '../lib/inspirationStorage'
 
 export type InspirationImageLightboxProps = {
   open: boolean
@@ -124,7 +125,7 @@ export function InspirationImageLightbox({
           )}
 
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-outline-variant bg-surface-container-lowest p-2 shadow-xl">
-            <img src={current} alt="" className="max-h-[min(72vh,640px)] max-w-full object-contain" />
+            <img src={displayUrlForInspirationImage(current)} alt="" className="max-h-[min(72vh,640px)] max-w-full object-contain" />
           </div>
 
           {list.length > 1 ? (

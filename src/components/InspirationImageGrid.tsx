@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { displayUrlForInspirationImage } from '../lib/inspirationStorage'
 
 type InspirationImageGridProps = {
   urls: string[]
@@ -25,7 +26,7 @@ export function InspirationImageGrid({ urls, className = '', onOpen }: Inspirati
             safe.length === 1 ? 'aspect-[4/3] max-h-[min(70vh,520px)] w-full' : 'aspect-square w-full'
           }`}
         >
-          <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <img src={displayUrlForInspirationImage(src)} alt="" className="h-full w-full object-cover" loading="lazy" />
         </button>
       ))}
     </div>

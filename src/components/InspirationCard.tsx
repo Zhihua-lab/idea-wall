@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
 import { LikeHeartIcon } from './LikeHeartIcon'
-import { normalizeInspirationImages } from '../lib/inspirationStorage'
+import { displayUrlForInspirationImage, normalizeInspirationImages } from '../lib/inspirationStorage'
 import { moodIconForStored } from '../lib/moodUi'
 import { formatRelativeTime } from '../lib/formatRelativeTime'
 import type { InspirationWithAuthor } from '../types/database'
@@ -47,7 +47,7 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
           <h3 className="font-headline-md text-headline-md mb-3 text-on-surface">{item.title}</h3>
           {thumb ? (
             <div className="mb-4 h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container shadow-sm">
-              <img src={thumb} alt="" className="h-full w-full object-cover" loading="lazy" />
+              <img src={displayUrlForInspirationImage(thumb)} alt="" className="h-full w-full object-cover" loading="lazy" />
             </div>
           ) : null}
           <p className="text-body-md text-on-surface-variant mb-6 line-clamp-3">{previewBody(item.body)}</p>
