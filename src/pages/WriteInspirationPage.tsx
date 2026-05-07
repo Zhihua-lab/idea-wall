@@ -237,12 +237,16 @@ export function WriteInspirationPage() {
         <div className="relative flex min-h-0 flex-col rounded-lg border border-outline-variant bg-surface-container-lowest p-md shadow-xl md:min-h-[720px] md:p-xl rotate-1 folded-corner">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-48 h-10 washi-tape shadow-sm z-10" />
 
-          <div className="mb-lg border-b-2 border-dashed border-outline-variant pb-md">
-            <h1 className="font-headline-xl text-headline-xl text-primary flex items-center gap-4">
-              {isEdit ? '编辑此刻灵感' : '记录此刻灵感'}
-              <span className="material-symbols-outlined text-4xl">auto_awesome</span>
+          <div className="mb-lg border-b-2 border-dashed border-outline-variant pb-md pr-1 sm:pr-0">
+            <h1 className="flex max-sm:flex-col max-sm:items-start max-sm:gap-1.5 sm:items-center sm:gap-3 md:gap-4 text-primary">
+              <span className="font-headline-xl text-headline-xl max-sm:whitespace-nowrap max-sm:text-[clamp(1.05rem,5.2vw,1.45rem)] max-sm:leading-tight max-sm:tracking-tight">
+                {isEdit ? '编辑此刻灵感' : '记录此刻灵感'}
+              </span>
+              <span className="material-symbols-outlined shrink-0 text-3xl sm:text-4xl max-sm:opacity-90">auto_awesome</span>
             </h1>
-            <p className="font-headline-md text-headline-md text-secondary opacity-70 italic">像在便签本上画小花一样自由...</p>
+            <p className="font-headline-md mt-2 max-sm:mt-1.5 max-sm:whitespace-nowrap max-sm:text-[clamp(0.8125rem,3.6vw,0.9375rem)] max-sm:leading-snug max-sm:tracking-tight sm:mt-2 text-headline-md text-secondary opacity-70 italic">
+              像在便签本上画小花一样自由…
+            </p>
           </div>
 
           {error && title ? <p className="text-error text-body-md mb-md">{error}</p> : null}
@@ -277,7 +281,7 @@ export function WriteInspirationPage() {
                 <textarea
                   id="body"
                   className="w-full bg-transparent border-none focus:ring-0 font-body-lg text-body-lg p-md leading-[32px] resize-none"
-                  placeholder="在这里自由地涂鸦、书写、记录任何让你心跳加速的事情..."
+                  placeholder="在这里自由书写、记录、涂鸦吧！"
                   rows={12}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}

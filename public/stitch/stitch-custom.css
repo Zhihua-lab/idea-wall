@@ -23,6 +23,10 @@
 .stitch-shell--write .folded-corner {
   clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 0 100%);
 }
+/* 写灵感页窄屏时标题易被右上角折角裁切，折角更平以保留「灵感」等尾字 */
+.stitch-shell--write .folded-corner {
+  clip-path: polygon(0 0, 96% 0, 100% 7%, 100% 100%, 0 100%);
+}
 .stitch-shell--home .folded-corner::after {
   content: '';
   position: absolute;
