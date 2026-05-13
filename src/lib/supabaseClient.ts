@@ -2,18 +2,27 @@ import { createClient } from '@supabase/supabase-js'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const PROXY_ANON_PLACEHOLDER = 'proxy-anon-key'
 
 if (!url || !anon) {
   // eslint-disable-next-line no-console -- dev hint only
   console.warn('[idea-wall] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY')
 }
 
-const supabaseOrigin = url ? new URL(url).origin : ''
+const browserOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+const supabaseUrl = url ?? browserOrigin
+const supabaseAnon = anon ?? PROXY_ANON_PLACEHOLDER
+const supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : ''
+
+function isSupabaseApiPath(pathname: string): boolean {
+  return pathname.startsWith('/rest/v1/') || pathname.startsWith('/auth/v1/') || pathname.startsWith('/storage/v1/')
+}
 
 function isRequestToSupabaseProject(href: string, projectOrigin: string): boolean {
   if (!projectOrigin) return false
   try {
-    return new URL(href).origin === projectOrigin
+    const u = new URL(href)
+    return u.origin === projectOrigin && (!url || isSupabaseApiPath(u.pathname))
   } catch {
     return false
   }
@@ -50,6 +59,6 @@ function createSupabaseProxyFetch(projectOrigin: string): typeof fetch {
   }
 }
 
-export const supabase = createClient(url ?? '', anon ?? '', {
+export const supabase = createClient(supabaseUrl, supabaseAnon, {
   global: supabaseOrigin ? { fetch: createSupabaseProxyFetch(supabaseOrigin) } : undefined,
 })

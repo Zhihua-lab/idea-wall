@@ -38,8 +38,7 @@ export function displayUrlForInspirationImage(stored: string): string {
   if (!pathname.startsWith('/storage/v1/object/public/')) return stored
 
   const proxyDisabled = import.meta.env.VITE_USE_SUPABASE_EDGE_PROXY === '0'
-  const useProxy =
-    import.meta.env.PROD && !proxyDisabled && Boolean(supabaseBase) && !isLocalOrLanHost()
+  const useProxy = import.meta.env.PROD && !proxyDisabled && !isLocalOrLanHost()
   if (useProxy) {
     return `/api/supabase-proxy?p=${encodeURIComponent(pathname)}`
   }

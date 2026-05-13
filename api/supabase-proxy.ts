@@ -10,6 +10,8 @@
  */
 export const runtime = 'nodejs'
 
+const PROXY_ANON_PLACEHOLDER = 'proxy-anon-key'
+
 function isAllowedSupabasePath(pathname: string): boolean {
   return (
     pathname.startsWith('/rest/v1/') ||
@@ -47,7 +49,11 @@ function buildUpstreamHeaders(req: Request, anon: string): Headers {
     const v = req.headers.get(name)
     if (v) out.set(name, v)
   }
-  if (!out.has('apikey')) out.set('apikey', anon)
+  const authorization = out.get('authorization')
+  out.set('apikey', anon)
+  if (!authorization || authorization === `Bearer ${PROXY_ANON_PLACEHOLDER}`) {
+    out.set('authorization', `Bearer ${anon}`)
+  }
   if (!out.has('accept')) out.set('accept', 'application/json')
   return out
 }
