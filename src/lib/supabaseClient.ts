@@ -10,8 +10,21 @@ if (!url || !anon) {
 
 const supabaseOrigin = url ? new URL(url).origin : ''
 
-/** Production: same-origin Edge proxy so traffic does not hit *.supabase.co from the browser. */
-function createSupabaseProxyFetch(realOrigin: string): typeof fetch {
+function isRequestToSupabaseProject(href: string, projectOrigin: string): boolean {
+  if (!projectOrigin) return false
+  try {
+    return new URL(href).origin === projectOrigin
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 生产构建：发往本项目 Supabase origin 的请求走同源 `/api/supabase-proxy`（Vercel Node，非 Edge）。
+ * `npm run dev` 直连 Supabase（本地无 /api 路由）。`VITE_USE_SUPABASE_EDGE_PROXY=0` 关闭改写。
+ * Storage 经代理时单张大小见 inspirationStorage MAX_BYTES（需低于平台对请求体的限制）。
+ */
+function createSupabaseProxyFetch(projectOrigin: string): typeof fetch {
   return (input, init) => {
     const href =
       typeof input === 'string'
@@ -21,7 +34,11 @@ function createSupabaseProxyFetch(realOrigin: string): typeof fetch {
           : (input as Request).url
 
     const proxyDisabled = import.meta.env.VITE_USE_SUPABASE_EDGE_PROXY === '0'
-    const useProxy = import.meta.env.PROD && !proxyDisabled && Boolean(realOrigin) && href.startsWith(realOrigin)
+    const useProxy =
+      import.meta.env.PROD &&
+      !proxyDisabled &&
+      Boolean(projectOrigin) &&
+      isRequestToSupabaseProject(href, projectOrigin)
 
     if (!useProxy) {
       return fetch(input as RequestInfo, init)

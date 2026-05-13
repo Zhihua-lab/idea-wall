@@ -4,9 +4,20 @@ export const INSPIRATION_IMAGES_BUCKET = 'inspiration-images'
 
 const supabaseBase = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
+/** 本地 / 局域网访问时无 Vercel `/api`，同源 /api/supabase-proxy 不存在，改写后图片会裂图 */
+function isLocalOrLanHost(): boolean {
+  if (typeof window === 'undefined') return false
+  const h = window.location.hostname
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h === '0.0.0.0') return true
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+  return false
+}
+
 /**
- * 生产环境经 Edge 代理访问 API 时，浏览器对 *.supabase.co 的图片直连常被网络/VPN 拦截。
- * 将「已保存的公开 object URL」改写为同源 `/api/supabase-proxy?p=/storage/v1/...`，由服务端带 apikey 拉取。
+ * 生产环境经同源代理访问 Storage 时，将「已保存的公开 object URL」改写为 `/api/supabase-proxy?p=/storage/v1/...`。
+ * localhost / 局域网 IP 上不要改写——本地无该 API；设置 VITE_USE_SUPABASE_EDGE_PROXY=0 时保持直连。
  */
 export function displayUrlForInspirationImage(stored: string): string {
   if (!stored) return stored
@@ -27,14 +38,16 @@ export function displayUrlForInspirationImage(stored: string): string {
   if (!pathname.startsWith('/storage/v1/object/public/')) return stored
 
   const proxyDisabled = import.meta.env.VITE_USE_SUPABASE_EDGE_PROXY === '0'
-  const useProxy = import.meta.env.PROD && !proxyDisabled && Boolean(supabaseBase)
+  const useProxy =
+    import.meta.env.PROD && !proxyDisabled && Boolean(supabaseBase) && !isLocalOrLanHost()
   if (useProxy) {
     return `/api/supabase-proxy?p=${encodeURIComponent(pathname)}`
   }
   return stored
 }
 
-const MAX_BYTES = 5 * 1024 * 1024
+/** 经同源代理上传：需低于 Vercel 等平台的函数请求体上限 */
+const MAX_BYTES = 4 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function normalizeInspirationImages(raw: unknown): string[] {
@@ -59,7 +72,7 @@ export function normalizeInspirationImages(raw: unknown): string[] {
 
 export function validateImageFile(file: File): string | null {
   if (!ALLOWED_TYPES.has(file.type)) return '仅支持 JPG / PNG / WebP 格式'
-  if (file.size > MAX_BYTES) return '单张图片不能超过 5MB，请先压缩后再上传'
+  if (file.size > MAX_BYTES) return '单张图片不能超过 4MB，请先压缩后再上传'
   return null
 }
 

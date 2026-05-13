@@ -1,11 +1,14 @@
 /**
- * Edge proxy: browser → same-origin /api/supabase-proxy → Supabase REST/Auth/Storage.
+ * Node.js proxy: browser → same-origin /api/supabase-proxy → Supabase REST/Auth/Storage.
  * Avoids direct *.supabase.co from the client (helps split-tunnel VPN / unstable paths).
  *
- * Uses SUPABASE_* env vars first: Vercel Edge may not expose VITE_* at runtime the same
+ * Uses **Node** (not Edge): Edge 对请求体约 4MB 上限且 multipart 再转发易断连（浏览器 ERR_CONNECTION_CLOSED）；
+ * Node Serverless 请求体上限更高，且整包缓冲后上游 fetch 更稳。
+ *
+ * Uses SUPABASE_* env vars first: Vercel may not expose VITE_* at runtime the same
  * way as the static build; duplicate the same URL/key in dashboard as SUPABASE_URL + SUPABASE_ANON_KEY.
  */
-export const config = { runtime: 'edge' }
+export const runtime = 'nodejs'
 
 function isAllowedSupabasePath(pathname: string): boolean {
   return (
@@ -35,6 +38,10 @@ function buildUpstreamHeaders(req: Request, anon: string): Headers {
     'accept-profile',
     'content-profile',
     'range',
+    'x-upsert',
+    'x-metadata',
+    'cache-control',
+    'content-range',
   ] as const
   for (const name of copy) {
     const v = req.headers.get(name)
@@ -45,7 +52,7 @@ function buildUpstreamHeaders(req: Request, anon: string): Headers {
   return out
 }
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
   try {
     const cred = supabaseCredentials()
     if (!cred) {
@@ -68,15 +75,7 @@ export default async function handler(req: Request): Promise<Response> {
       })
     }
 
-    let decoded: string
-    try {
-      decoded = decodeURIComponent(pEnc)
-    } catch {
-      return new Response(JSON.stringify({ error: 'Invalid p' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
+    const decoded = pEnc
 
     if (decoded.includes('..') || !decoded.startsWith('/')) {
       return new Response(JSON.stringify({ error: 'Forbidden path' }), {
@@ -104,13 +103,14 @@ export default async function handler(req: Request): Promise<Response> {
     const method = req.method.toUpperCase()
     const hasBody = method !== 'GET' && method !== 'HEAD' && req.body !== null
 
-    const init: RequestInit & { duplex?: 'half' } = {
+    const init: RequestInit = {
       method: req.method,
       headers: out,
     }
     if (hasBody) {
-      init.body = req.body
-      init.duplex = 'half'
+      // 一律缓冲后再转发：避免 ReadableStream + duplex 在代理链路上被对端提前关闭（ERR_CONNECTION_CLOSED /
+      // Failed to fetch）。Storage 上传为 multipart，亦适用 JSON 等小体请求。
+      init.body = await req.arrayBuffer()
     }
 
     return await fetch(target, init)
@@ -122,3 +122,5 @@ export default async function handler(req: Request): Promise<Response> {
     })
   }
 }
+
+export default { fetch: handler }

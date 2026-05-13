@@ -31,7 +31,9 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
   const firstTag = item.tags[0]
   const rel = formatRelativeTime(item.created_at)
   const icon = moodIconForStored(item.mood)
-  const thumb = normalizeInspirationImages(item.images)[0]
+  const imageUrls = normalizeInspirationImages(item.images)
+  const thumb = imageUrls[0]
+  const multiCount = imageUrls.length
   const likeDisabled = !user
   const heartFilled = Boolean(user && liked)
 
@@ -46,8 +48,19 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
           </div>
           <h3 className="font-headline-md text-headline-md mb-3 text-on-surface">{item.title}</h3>
           {thumb ? (
-            <div className="mb-4 h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container shadow-sm">
+            <div className="relative mb-4 h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container shadow-sm">
               <img src={displayUrlForInspirationImage(thumb)} alt="" className="h-full w-full object-cover" loading="lazy" />
+              {multiCount > 1 ? (
+                <span
+                  className="pointer-events-none absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md border border-white/30 bg-black/50 px-1 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm backdrop-blur-sm"
+                  aria-label={`共 ${multiCount} 张配图`}
+                >
+                  <span className="material-symbols-outlined text-[13px] opacity-95" aria-hidden>
+                    photo_library
+                  </span>
+                  <span aria-hidden>+{multiCount - 1}</span>
+                </span>
+              ) : null}
             </div>
           ) : null}
           <p className="text-body-md text-on-surface-variant mb-6 line-clamp-3">{previewBody(item.body)}</p>

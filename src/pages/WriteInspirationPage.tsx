@@ -429,7 +429,7 @@ export function WriteInspirationPage() {
                 <span className="material-symbols-outlined">photo_library</span>
                 配图（最多 3 张，可选）
               </label>
-              <p className="text-label-sm text-outline">支持 JPG / PNG / WebP，单张不超过 5MB</p>
+              <p className="text-label-sm text-outline">支持 JPG / PNG / WebP，单张不超过 4MB</p>
               <input
                 ref={fileInputRef}
                 type="file"
