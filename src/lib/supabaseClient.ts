@@ -22,7 +22,9 @@ function isRequestToSupabaseProject(href: string, projectOrigin: string): boolea
   if (!projectOrigin) return false
   try {
     const u = new URL(href)
-    return u.origin === projectOrigin && (!url || isSupabaseApiPath(u.pathname))
+    const isConfiguredOrigin = u.origin === projectOrigin
+    const isSupabaseOrigin = u.hostname.endsWith('.supabase.co')
+    return (isConfiguredOrigin || (import.meta.env.PROD && isSupabaseOrigin)) && (!url || isSupabaseApiPath(u.pathname))
   } catch {
     return false
   }

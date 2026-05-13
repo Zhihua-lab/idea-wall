@@ -28,7 +28,8 @@ export function displayUrlForInspirationImage(stored: string): string {
     const u = new URL(stored)
     if (supabaseBase) {
       const origin = new URL(supabaseBase).origin
-      if (u.origin !== origin) return stored
+      const isSupabaseStorageUrl = u.hostname.endsWith('.supabase.co')
+      if (u.origin !== origin && !(import.meta.env.PROD && isSupabaseStorageUrl)) return stored
     }
     pathname = u.pathname
   } catch {
