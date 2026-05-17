@@ -87,8 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    // URLSearchParams.get('p') 已解码中文，fetch 需要重新编码，否则 Supabase Storage 报 Invalid key。
-    const target = `${base}${encodeURI(decoded)}`
+    const target = `${base}${decoded}`
     const out = buildUpstreamHeaders(req, anon)
     // 图片等二进制：浏览器 <img> 常不带 Accept；默认 application/json 会导致 Storage 返回异常
     if (pathname.startsWith('/storage/v1/') && !req.headers.accept) {

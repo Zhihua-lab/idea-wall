@@ -188,7 +188,8 @@ function pickExtension(file: File): string {
 
 function safeFileStem(original: string): string {
   const base = original.replace(/\.[^/.]+$/, '').slice(0, 40)
-  const cleaned = base.replace(/[^\w\u4e00-\u9fff-]+/g, '_').replace(/_+/g, '_')
+  // \u53ea\u4fdd\u7559 ASCII \u5b57\u6bcd\u6570\u5b57\u548c\u8fde\u5b57\u7b26\uff0c\u907f\u514d\u4e2d\u6587\u5bfc\u81f4 Storage URL \u7f16\u7801\u95ee\u9898
+  const cleaned = base.replace(/[^\w-]+/g, '_').replace(/_+/g, '_')
   return cleaned || 'image'
 }
 
