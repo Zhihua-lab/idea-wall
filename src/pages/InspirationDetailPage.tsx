@@ -12,7 +12,15 @@ import {
 } from '../lib/inspirationsApi'
 import { normalizeInspirationImages } from '../lib/inspirationStorage'
 import { moodIconForStored, moodLineForDetail } from '../lib/moodUi'
-import type { InspirationWithAuthor } from '../types/database'
+import {
+  canEditComment,
+  deleteComment,
+  fetchCommentsByInspirationId,
+  insertComment,
+  MAX_COMMENT_LENGTH,
+  updateComment,
+} from '../lib/commentsApi'
+import type { CommentWithNickname, InspirationWithAuthor } from '../types/database'
 
 function formatAbsolute(iso: string): string {
   try {
@@ -56,13 +64,24 @@ export function InspirationDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
+  const [comments, setComments] = useState<CommentWithNickname[]>([])
+  const [commentText, setCommentText] = useState('')
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editSubmitting, setEditSubmitting] = useState(false)
+
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchInspirationById(id)
+      const [data, commentList] = await Promise.all([
+        fetchInspirationById(id),
+        fetchCommentsByInspirationId(id),
+      ])
       setRow(data)
+      setComments(commentList)
       if (user && data) {
         setLiked(await fetchLikedForUser(user.id, data.id))
       } else {
@@ -109,6 +128,63 @@ export function InspirationDetailPage() {
   const isAuthor = Boolean(user && row && user.id === row.user_id)
 
   const heartFilled = Boolean(user && liked)
+
+  const handleSubmitComment = async () => {
+    if (!user || !row || !commentText.trim()) return
+    setCommentSubmitting(true)
+    try {
+      const inserted = await insertComment(user.id, row.id, commentText.trim())
+      setComments((prev) => [...prev, { ...inserted, nickname: authNickname ?? '用户' }])
+      setRow((r) => (r ? { ...r, comments_count: r.comments_count + 1 } : r))
+      setCommentText('')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '评论失败')
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
+
+  const handleStartEdit = (c: CommentWithNickname) => {
+    if (!canEditComment(c, user?.id)) return
+    setEditingId(c.id)
+    setEditText(c.content)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!user || !editingId || !editText.trim()) return
+    setEditSubmitting(true)
+    try {
+      const updated = await updateComment(editingId, user.id, editText.trim())
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === editingId ? { ...c, content: updated.content, updated_at: updated.updated_at } : c,
+        ),
+      )
+      setEditingId(null)
+      setEditText('')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '更新失败')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditText('')
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return
+    if (!confirm('确定要删除这条评论吗？')) return
+    try {
+      await deleteComment(commentId, user.id)
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+      setRow((r) => (r ? { ...r, comments_count: Math.max(0, r.comments_count - 1) } : r))
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '删除失败')
+    }
+  }
 
   const imageUrls = useMemo(() => normalizeInspirationImages(row?.images ?? null), [row?.images])
 
@@ -291,6 +367,127 @@ export function InspirationDetailPage() {
                     </Link>
                   </div>
                 ) : null}
+              </div>
+            </section>
+
+            <section className="bg-surface-container-low/40 p-lg rounded-xl border border-dashed border-outline-variant space-y-md">
+              <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
+                <span className="material-symbols-outlined text-primary">comment</span>
+                评论 <span className="text-body-sm text-on-surface-variant font-normal">({row.comments_count})</span>
+              </h3>
+
+              {user ? (
+                <div className="flex flex-col gap-sm">
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="写下你的评论..."
+                    rows={3}
+                    maxLength={MAX_COMMENT_LENGTH}
+                    className="w-full rounded-lg border border-outline-variant bg-surface p-sm text-body-lg text-on-surface focus:border-primary focus:outline-none resize-none"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-body-sm text-outline">
+                      {commentText.length}/{MAX_COMMENT_LENGTH}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handleSubmitComment()}
+                      disabled={commentSubmitting || !commentText.trim()}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary px-md py-sm text-body-sm font-bold text-on-primary transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">send</span>
+                      {commentSubmitting ? '发送中...' : '发表评论'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-body-md text-on-surface-variant">
+                  <Link
+                    to={`/login?redirect=${encodeURIComponent(`/inspiration/${row.id}`)}`}
+                    className="text-primary underline decoration-wavy"
+                  >
+                    登录
+                  </Link>
+                  后参与评论
+                </p>
+              )}
+
+              <div className="space-y-sm">
+                {comments.length === 0 ? (
+                  <p className="text-body-md text-outline py-4 text-center">暂无评论，来写第一条吧 ✍️</p>
+                ) : (
+                  comments.map((c) => {
+                    const isEditing = editingId === c.id
+                    const editable = canEditComment(c, user?.id)
+                    const edited = new Date(c.updated_at).getTime() - new Date(c.created_at).getTime() > 2000
+                    return (
+                      <div key={c.id} className="rounded-lg bg-surface p-sm border border-outline-variant/50">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-tertiary-container text-tertiary text-body-sm font-bold">
+                              {(c.nickname || '用户').charAt(0)}
+                            </div>
+                            <span className="text-body-sm font-semibold text-on-surface">{c.nickname}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-body-sm text-outline">{formatRelativeShort(c.created_at)}</span>
+                            {edited ? <span className="text-body-sm text-outline">(已编辑)</span> : null}
+                            {editable && !isEditing ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(c)}
+                                  className="text-body-sm text-primary underline decoration-wavy bg-transparent border-0 cursor-pointer"
+                                >
+                                  编辑
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteComment(c.id)}
+                                  className="text-body-sm text-error underline decoration-wavy bg-transparent border-0 cursor-pointer"
+                                >
+                                  删除
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2 mt-2">
+                            <textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              rows={2}
+                              maxLength={MAX_COMMENT_LENGTH}
+                              className="w-full rounded-lg border border-outline-variant bg-surface p-sm text-body-lg text-on-surface focus:border-primary focus:outline-none resize-none"
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="rounded-full border border-outline-variant px-3 py-1 text-body-sm text-on-surface-variant bg-transparent cursor-pointer"
+                              >
+                                取消
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveEdit()}
+                                disabled={editSubmitting || !editText.trim()}
+                                className="rounded-full bg-primary px-3 py-1 text-body-sm font-bold text-on-primary border-0 cursor-pointer disabled:opacity-50"
+                              >
+                                {editSubmitting ? '保存中...' : '保存'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-body-lg text-on-surface whitespace-pre-wrap">{c.content}</p>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </section>
 

@@ -8,6 +8,7 @@ export type InspirationRow = {
   /** 公开图片 URL，最多 3 张；无图时为 null / [] / 缺列(undefined) */
   images?: string[] | null
   likes_count: number
+  comments_count: number
   created_at: string
   updated_at: string
 }
@@ -19,5 +20,18 @@ export type UserProfileRow = {
 }
 
 export type InspirationWithAuthor = InspirationRow & {
+  nickname: string
+}
+
+export type CommentRow = {
+  id: string
+  inspiration_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export type CommentWithNickname = CommentRow & {
   nickname: string
 }

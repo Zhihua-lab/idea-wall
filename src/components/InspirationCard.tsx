@@ -80,26 +80,32 @@ export function InspirationCard({ item, variant: v, liked, user, onToggleLike }:
           </Link>
           <div className="flex shrink-0 items-center gap-3">
             <span className="material-symbols-outlined text-lg text-primary">{icon}</span>
-            <button
-              type="button"
-              onClick={(e) => void onToggleLike(e, item.id)}
-              className={`inline-flex cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0.5 transition-transform duration-200 ease-out hover:scale-110 active:scale-95 ${
-                likeDisabled
-                  ? 'cursor-pointer text-stone-400'
-                  : heartFilled
-                    ? 'text-[#ba5f68]'
-                    : 'text-[#c9959a]'
-              }`}
-              aria-label={user ? (liked ? '取消点赞' : '点赞') : '登录后点赞'}
-            >
-              <LikeHeartIcon
-                filled={heartFilled}
-                className={`h-5 w-5 shrink-0 transition-transform duration-300 ease-out will-change-transform ${
-                  user && heartFilled ? 'scale-[1.08]' : 'scale-100'
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => void onToggleLike(e, item.id)}
+                className={`inline-flex cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0.5 transition-transform duration-200 ease-out hover:scale-110 active:scale-95 ${
+                  likeDisabled
+                    ? 'cursor-pointer text-stone-400'
+                    : heartFilled
+                      ? 'text-[#ba5f68]'
+                      : 'text-[#c9959a]'
                 }`}
-              />
-            </button>
-            <span className="text-label-sm font-semibold text-on-surface-variant">{item.likes_count}</span>
+                aria-label={user ? (liked ? '取消点赞' : '点赞') : '登录后点赞'}
+              >
+                <LikeHeartIcon
+                  filled={heartFilled}
+                  className={`h-5 w-5 shrink-0 transition-transform duration-300 ease-out will-change-transform ${
+                    user && heartFilled ? 'scale-[1.08]' : 'scale-100'
+                  }`}
+                />
+              </button>
+              <span className="text-label-sm font-semibold text-on-surface-variant">{item.likes_count}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="material-symbols-outlined text-[18px] text-on-surface-variant/70">chat_bubble</span>
+              <span className="text-label-sm font-semibold text-on-surface-variant">{item.comments_count}</span>
+            </div>
           </div>
         </div>
       </div>
