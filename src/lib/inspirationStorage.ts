@@ -46,8 +46,8 @@ export function displayUrlForInspirationImage(stored: string): string {
   return stored
 }
 
-/** 经同源代理上传：需低于 Vercel 等平台的函数请求体上限 */
-const MAX_BYTES = 4 * 1024 * 1024
+/** 单张上限：留足 multipart overhead 余量，避免接近 Vercel 4.5MB body limit */
+const MAX_BYTES = 3 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function normalizeInspirationImages(raw: unknown): string[] {
@@ -72,8 +72,100 @@ export function normalizeInspirationImages(raw: unknown): string[] {
 
 export function validateImageFile(file: File): string | null {
   if (!ALLOWED_TYPES.has(file.type)) return '仅支持 JPG / PNG / WebP 格式'
-  if (file.size > MAX_BYTES) return '单张图片不能超过 4MB，请先压缩后再上传'
+  if (file.size > MAX_BYTES) return '单张图片不能超过 3MB，请先压缩后再上传'
   return null
+}
+
+/** 用 canvas 压缩图片：最长边 1600px，JPEG quality 0.85；若仍超上限则逐步降级 */
+export async function compressImageFile(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      const maxDimension = 1600
+      let width = img.width
+      let height = img.height
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width)
+          width = maxDimension
+        } else {
+          width = Math.round((width * maxDimension) / height)
+          height = maxDimension
+        }
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('无法创建 canvas 上下文'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, width, height)
+
+      const tryExport = (quality: number, dims: { w: number; h: number }): Promise<Blob | null> => {
+        return new Promise((res) => {
+          if (dims.w !== canvas.width || dims.h !== canvas.height) {
+            const c = document.createElement('canvas')
+            c.width = dims.w
+            c.height = dims.h
+            const x = c.getContext('2d')
+            if (!x) { res(null); return }
+            x.drawImage(img, 0, 0, dims.w, dims.h)
+            c.toBlob((b) => res(b), 'image/jpeg', quality)
+          } else {
+            canvas.toBlob((b) => res(b), 'image/jpeg', quality)
+          }
+        })
+      }
+
+      const run = async () => {
+        const qualities = [0.85, 0.7, 0.5, 0.3]
+        const dimensions = [
+          { w: width, h: height },
+          { w: Math.round(width * 0.75), h: Math.round(height * 0.75) },
+          { w: Math.round(width * 0.5), h: Math.round(height * 0.5) },
+        ]
+
+        for (const dims of dimensions) {
+          for (const q of qualities) {
+            const blob = await tryExport(q, dims)
+            if (blob && blob.size <= MAX_BYTES) {
+              const name = safeFileStem(file.name) + '.jpg'
+              resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }))
+              return
+            }
+          }
+        }
+
+        // 最后尝试最小尺寸
+        const minW = Math.max(1, Math.round(width * 0.3))
+        const minH = Math.max(1, Math.round(height * 0.3))
+        const finalBlob = await tryExport(0.3, { w: minW, h: minH })
+        if (finalBlob && finalBlob.size <= MAX_BYTES) {
+          const name = safeFileStem(file.name) + '.jpg'
+          resolve(new File([finalBlob], name, { type: 'image/jpeg', lastModified: Date.now() }))
+          return
+        }
+
+        reject(new Error('图片压缩后仍超过 3MB，请手动压缩后再上传'))
+      }
+
+      void run()
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('无法读取图片'))
+    }
+
+    img.src = url
+  })
 }
 
 /**

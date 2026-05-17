@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { fetchInspirationById } from '../lib/inspirationsApi'
 import {
   cloneFileForUpload,
+  compressImageFile,
   displayUrlForInspirationImage,
   normalizeInspirationImages,
   removeInspirationImagesFromStorage,
@@ -193,7 +194,9 @@ export function WriteInspirationPage() {
             continue
           }
           try {
-            const stable = await cloneFileForUpload(file)
+            // 大于 1MB 的图片先 canvas 压缩（最长边 1600px / JPEG），小图直接读入内存
+            const stable =
+              file.size > 1 * 1024 * 1024 ? await compressImageFile(file) : await cloneFileForUpload(file)
             prepared.push({ file: stable, preview: URL.createObjectURL(stable) })
           } catch {
             setError('无法读取某张图片，请换一张或压缩后重试')
@@ -429,7 +432,7 @@ export function WriteInspirationPage() {
                 <span className="material-symbols-outlined">photo_library</span>
                 配图（最多 3 张，可选）
               </label>
-              <p className="text-label-sm text-outline">支持 JPG / PNG / WebP，单张不超过 4MB</p>
+              <p className="text-label-sm text-outline">支持 JPG / PNG / WebP，单张不超过 3MB</p>
               <input
                 ref={fileInputRef}
                 type="file"
