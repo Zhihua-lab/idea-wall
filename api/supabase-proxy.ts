@@ -119,7 +119,17 @@ async function handler(req: Request): Promise<Response> {
       init.body = await req.arrayBuffer()
     }
 
-    return await fetch(target, init)
+    const upstream = await fetch(target, init)
+    // Node fetch (undici) 默认自动解压 gzip/deflate body，但可能保留 Content-Encoding header。
+    // 若直接返回给浏览器，会导致 body 已解压而 header 仍声明 gzip → ERR_CONTENT_DECODING_FAILED。
+    const headers = new Headers(upstream.headers)
+    headers.delete('content-encoding')
+    headers.delete('transfer-encoding')
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers,
+    })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     return new Response(JSON.stringify({ error: 'supabase-proxy', detail: msg }), {
