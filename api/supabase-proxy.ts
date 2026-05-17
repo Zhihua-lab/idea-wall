@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
 const PROXY_ANON_PLACEHOLDER = 'proxy-anon-key'
 
 function isAllowedSupabasePath(pathname: string): boolean {
@@ -91,24 +97,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const method = req.method?.toUpperCase() || 'GET'
     const hasBody = method !== 'GET' && method !== 'HEAD'
 
-    const init: RequestInit & { duplex?: string } = {
+    // 禁用 bodyParser 后，手动原样读取 req stream，避免 Vercel 解析破坏 multipart 二进制数据。
+    let bodyBuffer: Buffer | undefined
+    if (hasBody) {
+      const chunks: Buffer[] = []
+      for await (const chunk of req as NodeJS.ReadableStream) {
+        chunks.push(chunk as Buffer)
+      }
+      bodyBuffer = Buffer.concat(chunks)
+    }
+
+    const init: RequestInit = {
       method: req.method,
       headers: out,
     }
-    if (hasBody) {
-      // Vercel 的 body parser 已经消费了 req stream，不能再次透传。
-      // 用解析好的 req.body 重新构造：对象转 JSON 字符串，字符串/Buffer 直接复用。
-      const parsed = req.body
-      if (typeof parsed === 'string') {
-        init.body = parsed
-      } else if (Buffer.isBuffer(parsed)) {
-        init.body = parsed
-      } else if (parsed && typeof parsed === 'object') {
-        init.body = JSON.stringify(parsed)
-        if (!out.has('content-type')) {
-          out.set('content-type', 'application/json')
-        }
-      }
+    if (bodyBuffer && bodyBuffer.length > 0) {
+      init.body = bodyBuffer
     }
 
     const upstream = await fetch(target, init)

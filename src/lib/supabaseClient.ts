@@ -48,20 +48,12 @@ function createSupabaseProxyFetch(projectOrigin: string): typeof fetch {
 
     const method = (init?.method ?? 'GET').toUpperCase()
     const u = new URL(href)
-    // Storage 写入（上传）绕过代理：避免 Vercel 4.5MB body limit 导致 ERR_CONNECTION_CLOSED。
-    // 浏览器直连 *.supabase.co 在国内/某些网络下会被阻断，REST/Auth/Storage 读取仍走代理。
-    const isStorageUpload =
-      method !== 'GET' &&
-      method !== 'HEAD' &&
-      u.pathname.startsWith('/storage/v1/object/') &&
-      !u.pathname.includes('/public/')
-
+    // 浏览器直连 *.supabase.co 在国内/某些网络下会被阻断，所有请求都走代理。
     const useProxy =
       import.meta.env.PROD &&
       !proxyDisabled &&
       Boolean(projectOrigin) &&
-      isRequestToSupabaseProject(href, projectOrigin) &&
-      !isStorageUpload
+      isRequestToSupabaseProject(href, projectOrigin)
 
     if (!useProxy) {
       return fetch(input as RequestInfo, init)
