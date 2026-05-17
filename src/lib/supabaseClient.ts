@@ -46,7 +46,6 @@ function createSupabaseProxyFetch(projectOrigin: string): typeof fetch {
 
     const proxyDisabled = import.meta.env.VITE_USE_SUPABASE_EDGE_PROXY === '0'
 
-    const method = (init?.method ?? 'GET').toUpperCase()
     const u = new URL(href)
     // 浏览器直连 *.supabase.co 在国内/某些网络下会被阻断，所有请求都走代理。
     const useProxy =
