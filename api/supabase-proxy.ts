@@ -107,16 +107,21 @@ async function handler(req: Request): Promise<Response> {
     }
 
     const method = req.method.toUpperCase()
-    const hasBody = method !== 'GET' && method !== 'HEAD' && req.body !== null
+    // 注意：Edge Runtime 下 req.body 可能已被框架消费，用 req.clone() 也救不了。
+    // 这里先用 text() 读 JSON，fallback 到 arrayBuffer() 读二进制，避免空 body。
+    const ct = req.headers.get('content-type') || ''
+    const isJson = ct.includes('application/json')
 
     const init: RequestInit = {
       method: req.method,
       headers: out,
     }
-    if (hasBody) {
-      // 一律缓冲后再转发：避免 ReadableStream + duplex 在代理链路上被对端提前关闭（ERR_CONNECTION_CLOSED /
-      // Failed to fetch）。Storage 上传为 multipart，亦适用 JSON 等小体请求。
-      init.body = await req.arrayBuffer()
+    if (method !== 'GET' && method !== 'HEAD') {
+      if (isJson) {
+        init.body = await req.text()
+      } else {
+        init.body = await req.arrayBuffer()
+      }
     }
 
     const upstream = await fetch(target, init)
@@ -139,4 +144,4 @@ async function handler(req: Request): Promise<Response> {
   }
 }
 
-export default { fetch: handler }
+export default handler
