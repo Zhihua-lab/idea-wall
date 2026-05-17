@@ -121,7 +121,6 @@ export function WriteInspirationPage() {
   const resolvedMood = mood === 'other' ? moodOther.trim() : mood
   const canSubmit =
     title.trim().length > 0 &&
-    body.trim().length > 0 &&
     (mood !== 'other' || moodOther.trim().length > 0) &&
     selectedTags.length <= 3
 
