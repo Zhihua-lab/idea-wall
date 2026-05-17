@@ -258,6 +258,7 @@ export function WriteInspirationPage() {
             mood: moodValue,
             tags: selectedTags,
             images: finalImages.length > 0 ? finalImages : null,
+            is_edited: true,
           })
           .eq('id', editId)
           .eq('user_id', user.id)

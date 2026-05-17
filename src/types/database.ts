@@ -9,6 +9,7 @@ export type InspirationRow = {
   images?: string[] | null
   likes_count: number
   comments_count: number
+  is_edited: boolean
   created_at: string
   updated_at: string
 }

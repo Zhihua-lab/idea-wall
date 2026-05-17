@@ -46,9 +46,7 @@ function formatRelativeShort(iso: string): string {
 }
 
 function isEdited(row: InspirationWithAuthor): boolean {
-  const a = new Date(row.created_at).getTime()
-  const b = new Date(row.updated_at).getTime()
-  return Math.abs(b - a) > 2000
+  return row.is_edited === true
 }
 
 export function InspirationDetailPage() {
