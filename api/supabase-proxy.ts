@@ -96,10 +96,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: out,
     }
     if (hasBody) {
-      // Node.js 18+ fetch (undici) 支持将 IncomingMessage Stream 直接作为 body，
-      // 需标记 duplex: 'half'，这样上游 fetch 会按需读取，不会缓冲整个 body。
-      init.body = req as unknown as ReadableStream
-      init.duplex = 'half'
+      // Vercel 的 body parser 已经消费了 req stream，不能再次透传。
+      // 用解析好的 req.body 重新构造：对象转 JSON 字符串，字符串/Buffer 直接复用。
+      const parsed = req.body
+      if (typeof parsed === 'string') {
+        init.body = parsed
+      } else if (Buffer.isBuffer(parsed)) {
+        init.body = parsed
+      } else if (parsed && typeof parsed === 'object') {
+        init.body = JSON.stringify(parsed)
+        if (!out.has('content-type')) {
+          out.set('content-type', 'application/json')
+        }
+      }
     }
 
     const upstream = await fetch(target, init)
@@ -113,8 +122,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const [key, value] of headers) {
       res.setHeader(key, value)
     }
-    // 上游 body 已经是解压后的文本/二进制，直接文本化后返回
-    const body = await upstream.text()
+    // 上游 body 可能是 JSON 文本也可能是二进制图片，统一用 arrayBuffer() 读取再转 Buffer，
+    // 避免 text() 对二进制数据做 UTF-8 解码导致图片损坏。
+    const body = Buffer.from(await upstream.arrayBuffer())
     res.send(body)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
