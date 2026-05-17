@@ -107,21 +107,15 @@ async function handler(req: Request): Promise<Response> {
     }
 
     const method = req.method.toUpperCase()
-    // 注意：Edge Runtime 下 req.body 可能已被框架消费，用 req.clone() 也救不了。
-    // 这里先用 text() 读 JSON，fallback 到 arrayBuffer() 读二进制，避免空 body。
-    const ct = req.headers.get('content-type') || ''
-    const isJson = ct.includes('application/json')
 
     const init: RequestInit = {
       method: req.method,
       headers: out,
     }
-    if (method !== 'GET' && method !== 'HEAD') {
-      if (isJson) {
-        init.body = await req.text()
-      } else {
-        init.body = await req.arrayBuffer()
-      }
+    if (method !== 'GET' && method !== 'HEAD' && req.body) {
+      // 直接透传 ReadableStream，避免缓冲后再构造导致 body 丢失或编码错位。
+      // Edge Runtime 的 fetch 对 ReadableStream body 原生支持，无需 duplex 标记。
+      init.body = req.body
     }
 
     const upstream = await fetch(target, init)
