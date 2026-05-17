@@ -421,7 +421,6 @@ export function WriteInspirationPage() {
                   rows={12}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  required
                 />
               </div>
             </div>
