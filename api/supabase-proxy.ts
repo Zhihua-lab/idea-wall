@@ -1,14 +1,4 @@
-/**
- * Node.js proxy: browser → same-origin /api/supabase-proxy → Supabase REST/Auth/Storage.
- * Avoids direct *.supabase.co from the client (helps split-tunnel VPN / unstable paths).
- *
- * Uses **Node** (not Edge): Edge 对请求体约 4MB 上限且 multipart 再转发易断连（浏览器 ERR_CONNECTION_CLOSED）；
- * Node Serverless 请求体上限更高，且整包缓冲后上游 fetch 更稳。
- *
- * Uses SUPABASE_* env vars first: Vercel may not expose VITE_* at runtime the same
- * way as the static build; duplicate the same URL/key in dashboard as SUPABASE_URL + SUPABASE_ANON_KEY.
- */
-export const runtime = 'nodejs'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const PROXY_ANON_PLACEHOLDER = 'proxy-anon-key'
 
@@ -28,7 +18,7 @@ function supabaseCredentials(): { base: string; anon: string } | null {
 }
 
 /** Headers Supabase PostgREST / GoTrue expect; avoid forwarding browser-only hop headers. */
-function buildUpstreamHeaders(req: Request, anon: string): Headers {
+function buildUpstreamHeaders(req: VercelRequest, anon: string): Headers {
   const out = new Headers()
   const copy = [
     'authorization',
@@ -46,8 +36,8 @@ function buildUpstreamHeaders(req: Request, anon: string): Headers {
     'content-range',
   ] as const
   for (const name of copy) {
-    const v = req.headers.get(name)
-    if (v) out.set(name, v)
+    const v = req.headers[name]
+    if (v) out.set(name, Array.isArray(v) ? v.join(', ') : v)
   }
   const authorization = out.get('authorization')
   out.set('apikey', anon)
@@ -58,64 +48,58 @@ function buildUpstreamHeaders(req: Request, anon: string): Headers {
   return out
 }
 
-async function handler(req: Request): Promise<Response> {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const cred = supabaseCredentials()
     if (!cred) {
-      return new Response(
-        JSON.stringify({
-          error:
-            'Missing Supabase env on server. Set SUPABASE_URL and SUPABASE_ANON_KEY in Vercel (same values as VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
-        }),
-        { status: 500, headers: { 'content-type': 'application/json' } },
-      )
+      res.status(500).json({
+        error:
+          'Missing Supabase env on server. Set SUPABASE_URL and SUPABASE_ANON_KEY in Vercel (same values as VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
+      })
+      return
     }
     const { base, anon } = cred
 
-    const url = new URL(req.url)
+    const url = new URL(req.url!, `http://${req.headers.host}`)
     const pEnc = url.searchParams.get('p')
     if (!pEnc) {
-      return new Response(JSON.stringify({ error: 'Missing query p' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
+      res.status(400).json({ error: 'Missing query p' })
+      return
     }
 
     const decoded = pEnc
 
     if (decoded.includes('..') || !decoded.startsWith('/')) {
-      return new Response(JSON.stringify({ error: 'Forbidden path' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' },
-      })
+      res.status(403).json({ error: 'Forbidden path' })
+      return
     }
 
     const q = decoded.indexOf('?')
     const pathname = q >= 0 ? decoded.slice(0, q) : decoded
     if (!isAllowedSupabasePath(pathname)) {
-      return new Response(JSON.stringify({ error: 'Forbidden path' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' },
-      })
+      res.status(403).json({ error: 'Forbidden path' })
+      return
     }
 
     const target = `${base}${decoded}`
     const out = buildUpstreamHeaders(req, anon)
     // 图片等二进制：浏览器 <img> 常不带 Accept；默认 application/json 会导致 Storage 返回异常
-    if (pathname.startsWith('/storage/v1/') && !req.headers.get('accept')) {
+    if (pathname.startsWith('/storage/v1/') && !req.headers.accept) {
       out.set('accept', '*/*')
     }
 
-    const method = req.method.toUpperCase()
+    const method = req.method?.toUpperCase() || 'GET'
+    const hasBody = method !== 'GET' && method !== 'HEAD'
 
-    const init: RequestInit = {
+    const init: RequestInit & { duplex?: string } = {
       method: req.method,
       headers: out,
     }
-    if (method !== 'GET' && method !== 'HEAD' && req.body) {
-      // 直接透传 ReadableStream，避免缓冲后再构造导致 body 丢失或编码错位。
-      // Edge Runtime 的 fetch 对 ReadableStream body 原生支持，无需 duplex 标记。
-      init.body = req.body
+    if (hasBody) {
+      // Node.js 18+ fetch (undici) 支持将 IncomingMessage Stream 直接作为 body，
+      // 需标记 duplex: 'half'，这样上游 fetch 会按需读取，不会缓冲整个 body。
+      init.body = req as unknown as ReadableStream
+      init.duplex = 'half'
     }
 
     const upstream = await fetch(target, init)
@@ -124,18 +108,16 @@ async function handler(req: Request): Promise<Response> {
     const headers = new Headers(upstream.headers)
     headers.delete('content-encoding')
     headers.delete('transfer-encoding')
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers,
-    })
+
+    res.status(upstream.status)
+    for (const [key, value] of headers) {
+      res.setHeader(key, value)
+    }
+    // 上游 body 已经是解压后的文本/二进制，直接文本化后返回
+    const body = await upstream.text()
+    res.send(body)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
-    return new Response(JSON.stringify({ error: 'supabase-proxy', detail: msg }), {
-      status: 502,
-      headers: { 'content-type': 'application/json' },
-    })
+    res.status(502).json({ error: 'supabase-proxy', detail: msg })
   }
 }
-
-export default { fetch: handler }
