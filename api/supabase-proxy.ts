@@ -144,4 +144,4 @@ async function handler(req: Request): Promise<Response> {
   }
 }
 
-export default handler
+export default { fetch: handler }
