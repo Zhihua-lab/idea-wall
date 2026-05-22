@@ -76,7 +76,7 @@ export async function publishAiComment(inspirationId: string, content: string): 
   const accessToken = await getAccessToken()
   const trimmed = content.trim()
   if (!trimmed) {
-    throw new Error('小i还没有生成有效评论')
+    throw new Error('小满还没有生成有效评论')
   }
 
   const response = await fetch('/api/ai-comment', {
@@ -94,10 +94,10 @@ export async function publishAiComment(inspirationId: string, content: string): 
   const data = (await response.json().catch(() => ({}))) as PublishAiCommentResponse
 
   if (!response.ok) {
-    throw new Error(data.error || '小i 评论发布失败，请稍后再试')
+    throw new Error(data.error || '小满评论发布失败，请稍后再试')
   }
   if (!data.comment) {
-    throw new Error('小i 评论发布失败，请稍后再试')
+    throw new Error('小满评论发布失败，请稍后再试')
   }
   return data.comment
 }

@@ -41,7 +41,7 @@ export async function fetchCommentsByInspirationId(inspirationId: string): Promi
 
   return rows.map((r) => ({
     ...r,
-    nickname: r.is_ai_generated ? (r.ai_display_name ?? '小i') : (nickMap.get(r.user_id) ?? '用户'),
+    nickname: r.is_ai_generated ? (r.ai_display_name ?? '小满') : (nickMap.get(r.user_id) ?? '用户'),
     requested_by_nickname: r.requested_by_user_id ? (nickMap.get(r.requested_by_user_id) ?? '用户') : null,
   }))
 }

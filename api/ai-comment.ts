@@ -128,7 +128,7 @@ async function insertAiComment(input: {
       user_id: input.userId,
       content: input.content,
       is_ai_generated: true,
-      ai_display_name: '小i',
+      ai_display_name: '小满',
       requested_by_user_id: input.userId,
     }),
   })
@@ -136,7 +136,7 @@ async function insertAiComment(input: {
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     const message =
-      typeof data?.message === 'string' ? data.message : '小i 评论发布失败，请稍后再试'
+      typeof data?.message === 'string' ? data.message : '小满评论发布失败，请稍后再试'
     throw new Error(message)
   }
   return (Array.isArray(data) ? data[0] : data) as CommentRow
@@ -179,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const inspirationId = asTrimmedString(payload.inspirationId, 80)
       const content = normalizeComment(asTrimmedString(payload.content, MAX_COMMENT_LENGTH))
       if (!inspirationId || !content) {
-        res.status(400).json({ error: '缺少发布小i评论所需的内容' })
+        res.status(400).json({ error: '缺少发布小满评论所需的内容' })
         return
       }
       const inserted = await insertAiComment({

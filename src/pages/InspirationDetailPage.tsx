@@ -178,7 +178,7 @@ export function InspirationDetailPage() {
         ...prev,
         {
           ...inserted,
-          nickname: inserted.ai_display_name ?? '小i',
+          nickname: inserted.ai_display_name ?? '小满',
           requested_by_nickname: authNickname ?? '用户',
         },
       ])
@@ -186,7 +186,7 @@ export function InspirationDetailPage() {
       setAiCommentOpen(false)
       setAiCommentText('')
     } catch (e: unknown) {
-      setAiCommentError(e instanceof Error ? e.message : '小i 评论发布失败，请稍后再试')
+      setAiCommentError(e instanceof Error ? e.message : '小满评论发布失败，请稍后再试')
     } finally {
       setAiCommentPublishing(false)
     }
@@ -575,7 +575,7 @@ export function InspirationDetailPage() {
                         AI 评论预览
                       </h4>
                       <p className="mt-1 text-body-sm text-on-surface-variant">
-                        先看看这句合不合心意，确认后由小i发表。
+                        先看看这句合不合心意，确认后由小满发表。
                       </p>
                     </div>
                     <button
@@ -624,7 +624,7 @@ export function InspirationDetailPage() {
                       className="inline-flex items-center gap-1 rounded-full border-0 bg-primary px-md py-sm text-body-sm font-bold text-on-primary cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="material-symbols-outlined text-[20px]">smart_toy</span>
-                      {aiCommentPublishing ? '发表中...' : '让小i发表'}
+                      {aiCommentPublishing ? '发表中...' : '让小满发表'}
                     </button>
                   </div>
                 </div>
