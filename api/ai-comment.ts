@@ -23,6 +23,16 @@ type KimiChatResponse = {
   }
 }
 
+function friendlyKimiError(status: number, message: string | undefined): string {
+  if (status === 401 || /invalid authentication/i.test(message ?? '')) {
+    return 'Kimi API Key 无效，请检查 Vercel 里的 MOONSHOT_API_KEY'
+  }
+  if (status === 429) {
+    return 'AI 评论生成太频繁了，请稍后再试'
+  }
+  return message || 'AI 评论生成失败，请稍后再试'
+}
+
 type PromptInput = {
   title: string
   body: string
@@ -148,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = (await upstream.json().catch(() => ({}))) as KimiChatResponse
     if (!upstream.ok) {
       res.status(upstream.status >= 500 ? 502 : upstream.status).json({
-        error: data.error?.message || 'AI 评论生成失败，请稍后再试',
+        error: friendlyKimiError(upstream.status, data.error?.message),
       })
       return
     }
