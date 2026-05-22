@@ -12,6 +12,7 @@ import {
 } from '../lib/inspirationsApi'
 import { normalizeInspirationImages } from '../lib/inspirationStorage'
 import { moodIconForStored, moodLineForDetail } from '../lib/moodUi'
+import { generateAiComment } from '../lib/aiCommentApi'
 import {
   canEditComment,
   deleteComment,
@@ -68,6 +69,10 @@ export function InspirationDetailPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [editSubmitting, setEditSubmitting] = useState(false)
+  const [aiCommentOpen, setAiCommentOpen] = useState(false)
+  const [aiCommentText, setAiCommentText] = useState('')
+  const [aiCommentLoading, setAiCommentLoading] = useState(false)
+  const [aiCommentError, setAiCommentError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -140,6 +145,32 @@ export function InspirationDetailPage() {
     } finally {
       setCommentSubmitting(false)
     }
+  }
+
+  const handleGenerateAiComment = async () => {
+    if (!user || !row || aiCommentLoading) return
+    setAiCommentOpen(true)
+    setAiCommentLoading(true)
+    setAiCommentError(null)
+    try {
+      const next = await generateAiComment({
+        title: row.title,
+        body: row.body,
+        mood: row.mood,
+        tags: row.tags ?? [],
+      })
+      setAiCommentText(next)
+    } catch (e: unknown) {
+      setAiCommentError(e instanceof Error ? e.message : 'AI 评论生成失败，请稍后再试')
+    } finally {
+      setAiCommentLoading(false)
+    }
+  }
+
+  const handleInsertAiComment = () => {
+    if (!aiCommentText.trim()) return
+    setCommentText(aiCommentText.trim().slice(0, MAX_COMMENT_LENGTH))
+    setAiCommentOpen(false)
   }
 
   const handleStartEdit = (c: CommentWithNickname) => {
@@ -388,15 +419,26 @@ export function InspirationDetailPage() {
                     <span className="text-body-sm text-outline">
                       {commentText.length}/{MAX_COMMENT_LENGTH}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => void handleSubmitComment()}
-                      disabled={commentSubmitting || !commentText.trim()}
-                      className="inline-flex items-center gap-1 rounded-full bg-primary px-md py-sm text-body-sm font-bold text-on-primary transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">send</span>
-                      {commentSubmitting ? '发送中...' : '发表评论'}
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleGenerateAiComment()}
+                        disabled={aiCommentLoading}
+                        className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary-container/20 px-md py-sm text-body-sm font-bold text-primary transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
+                        {aiCommentLoading ? '生成中...' : 'AI评论'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSubmitComment()}
+                        disabled={commentSubmitting || !commentText.trim()}
+                        className="inline-flex items-center gap-1 rounded-full bg-primary px-md py-sm text-body-sm font-bold text-on-primary transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">send</span>
+                        {commentSubmitting ? '发送中...' : '发表评论'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -488,6 +530,76 @@ export function InspirationDetailPage() {
                 )}
               </div>
             </section>
+
+            {aiCommentOpen ? (
+              <div className="fixed inset-0 z-[80] flex items-center justify-center bg-stone-950/40 px-4 py-6">
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="ai-comment-title"
+                  className="w-full max-w-lg rounded-xl border-2 border-dashed border-outline-variant bg-surface p-lg shadow-xl"
+                >
+                  <div className="mb-md flex items-start justify-between gap-4">
+                    <div>
+                      <h4 id="ai-comment-title" className="font-headline-md text-headline-md text-on-surface">
+                        AI 评论预览
+                      </h4>
+                      <p className="mt-1 text-body-sm text-on-surface-variant">
+                        先看看这句合不合心意，插入后还可以自己改。
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAiCommentOpen(false)}
+                      className="material-symbols-outlined rounded-full border-0 bg-transparent p-1 text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
+                      aria-label="关闭 AI 评论预览"
+                    >
+                      close
+                    </button>
+                  </div>
+
+                  <div className="min-h-[120px] rounded-lg border border-outline-variant bg-white/60 p-md text-body-lg text-on-surface whitespace-pre-wrap">
+                    {aiCommentLoading ? (
+                      <span className="text-on-surface-variant">正在认真读这条灵感...</span>
+                    ) : aiCommentText ? (
+                      aiCommentText
+                    ) : (
+                      <span className="text-on-surface-variant">还没有生成内容。</span>
+                    )}
+                  </div>
+
+                  {aiCommentError ? <p className="mt-sm text-body-sm text-error">{aiCommentError}</p> : null}
+
+                  <div className="mt-md flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAiCommentOpen(false)}
+                      className="rounded-full border border-outline-variant bg-transparent px-md py-sm text-body-sm font-bold text-on-surface-variant cursor-pointer hover:bg-surface-container-high"
+                    >
+                      取消
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleGenerateAiComment()}
+                      disabled={aiCommentLoading}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-transparent px-md py-sm text-body-sm font-bold text-primary cursor-pointer hover:bg-primary-container/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">refresh</span>
+                      重新生成
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleInsertAiComment}
+                      disabled={aiCommentLoading || !aiCommentText.trim()}
+                      className="inline-flex items-center gap-1 rounded-full border-0 bg-primary px-md py-sm text-body-sm font-bold text-on-primary cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">edit_note</span>
+                      插入评论框
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {row && imageUrls.length > 0 ? (
               <InspirationImageLightbox
