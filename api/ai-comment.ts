@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const KIMI_CHAT_COMPLETIONS_URL = 'https://api.moonshot.cn/v1/chat/completions'
-const KIMI_MODEL = 'kimi-k2.6'
+const ZHIPU_CHAT_COMPLETIONS_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const ZHIPU_MODEL = 'glm-4.7-flash'
 const MAX_COMMENT_LENGTH = 500
 const MAX_BODY_LENGTH = 4000
 
@@ -12,7 +12,7 @@ type AiCommentRequest = {
   tags?: unknown
 }
 
-type KimiChatResponse = {
+type ChatCompletionResponse = {
   choices?: Array<{
     message?: {
       content?: string | null
@@ -23,9 +23,9 @@ type KimiChatResponse = {
   }
 }
 
-function friendlyKimiError(status: number, message: string | undefined): string {
-  if (status === 401 || /invalid authentication/i.test(message ?? '')) {
-    return 'Kimi API Key 无效，请检查 Vercel 里的 MOONSHOT_API_KEY'
+function friendlyAiError(status: number, message: string | undefined): string {
+  if (status === 401 || /invalid|authentication|unauthorized|api key/i.test(message ?? '')) {
+    return '智谱 API Key 无效，请检查 Vercel 里的 ZHIPU_API_KEY'
   }
   if (status === 429) {
     return 'AI 评论生成太频繁了，请稍后再试'
@@ -114,9 +114,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const apiKey = process.env.MOONSHOT_API_KEY
+    const apiKey = process.env.ZHIPU_API_KEY || process.env.BIGMODEL_API_KEY
     if (!apiKey) {
-      res.status(500).json({ error: 'AI 评论暂未配置，请稍后再试' })
+      res.status(500).json({ error: 'AI 评论暂未配置，请在 Vercel 配置 ZHIPU_API_KEY' })
       return
     }
 
@@ -131,14 +131,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const upstream = await fetch(KIMI_CHAT_COMPLETIONS_URL, {
+    const upstream = await fetch(ZHIPU_CHAT_COMPLETIONS_URL, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: KIMI_MODEL,
+        model: ZHIPU_MODEL,
         temperature: 0.82,
         max_tokens: 180,
         messages: [
@@ -155,10 +155,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     })
 
-    const data = (await upstream.json().catch(() => ({}))) as KimiChatResponse
+    const data = (await upstream.json().catch(() => ({}))) as ChatCompletionResponse
     if (!upstream.ok) {
       res.status(upstream.status >= 500 ? 502 : upstream.status).json({
-        error: friendlyKimiError(upstream.status, data.error?.message),
+        error: friendlyAiError(upstream.status, data.error?.message),
       })
       return
     }

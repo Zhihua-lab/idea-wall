@@ -8,7 +8,7 @@ Vite + React + TypeScript + React Router + **Supabase**。Stitch 的 Tailwind �
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `MOONSHOT_API_KEY`（服务端专用，用于 `/api/ai-comment` 调用 Kimi，不要加 `VITE_` 前缀）
+- `ZHIPU_API_KEY`（服务端专用，用于 `/api/ai-comment` 调用智谱 GLM，不要加 `VITE_` 前缀）
 
 生产构建（如 Vercel）默认通过 **`/api/supabase-proxy`** 转发 REST/Auth/Storage 到 Supabase；`npm run dev` 仍直连 Supabase。服务端代理优先读取 **`SUPABASE_URL`**、**`SUPABASE_ANON_KEY`**（与 `VITE_SUPABASE_*` 同值），否则线上代理可能 500。仅在本地执行 `vite preview` 且需要直连时，可在 `.env` 中设置 `VITE_USE_SUPABASE_EDGE_PROXY=0`。
 
