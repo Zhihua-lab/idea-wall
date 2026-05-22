@@ -140,10 +140,10 @@ export function HomePage() {
               to="/"
               className="font-serif italic tracking-tight text-lime-700 underline decoration-wavy transition-all hover:rotate-1 hover:scale-105 dark:text-lime-300"
             >
-              Latest
+              最新
             </Link>
-            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">My Journal</span>
-            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">Collections</span>
+            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">我的随手记</span>
+            <span className="font-serif italic tracking-tight text-stone-600 dark:text-stone-400">收藏集</span>
           </nav>
           <div className="flex items-center gap-4 border-l border-stone-300 pl-6 dark:border-stone-600">
             {!authLoading && user ? (
@@ -152,7 +152,7 @@ export function HomePage() {
                   to="/new"
                   className="inline-block bg-primary px-4 py-2 text-center text-label-sm font-bold text-on-primary hand-drawn-oval transition-all hover:rotate-1 hover:scale-105 active:rotate-[-1deg] active:scale-95"
                 >
-                  Write Inspiration
+                  写灵感
                 </Link>
                 <UserAccountDropdown user={user} nickname={nickname} signOut={signOut} />
               </>
@@ -230,10 +230,10 @@ export function HomePage() {
                 onClick={closeMobileNav}
                 className="text-lime-800 underline decoration-wavy dark:text-lime-200"
               >
-                Latest
+                最新
               </Link>
-              <span className="text-stone-500 dark:text-stone-400">My Journal（敬请期待）</span>
-              <span className="text-stone-500 dark:text-stone-400">Collections（敬请期待）</span>
+              <span className="text-stone-500 dark:text-stone-400">我的随手记（敬请期待）</span>
+              <span className="text-stone-500 dark:text-stone-400">收藏集（敬请期待）</span>
               <div className="mt-auto border-t border-dashed border-stone-300 pt-6 dark:border-stone-600">
                 {!authLoading && user ? (
                   <Link
@@ -241,7 +241,7 @@ export function HomePage() {
                     onClick={closeMobileNav}
                     className="bg-primary px-4 py-3 text-center text-on-primary hand-drawn-oval text-label-sm font-bold"
                   >
-                    Write Inspiration
+                    写灵感
                   </Link>
                 ) : !authLoading ? (
                   <Link
