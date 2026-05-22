@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { MAX_COMMENT_LENGTH } from './commentsApi'
+import type { CommentRow } from '../types/database'
 
 const AI_COMMENT_TIMEOUT_MS = 30000
 
@@ -15,7 +16,12 @@ type AiCommentResponse = {
   error?: string
 }
 
-export async function generateAiComment(input: GenerateAiCommentInput): Promise<string> {
+type PublishAiCommentResponse = {
+  comment?: CommentRow
+  error?: string
+}
+
+async function getAccessToken(): Promise<string> {
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -23,6 +29,11 @@ export async function generateAiComment(input: GenerateAiCommentInput): Promise<
   if (!session?.access_token) {
     throw new Error('请先登录后再使用 AI 评论')
   }
+  return session.access_token
+}
+
+export async function generateAiComment(input: GenerateAiCommentInput): Promise<string> {
+  const accessToken = await getAccessToken()
 
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), AI_COMMENT_TIMEOUT_MS)
@@ -31,10 +42,10 @@ export async function generateAiComment(input: GenerateAiCommentInput): Promise<
     const response = await fetch('/api/ai-comment', {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${session.access_token}`,
+        authorization: `Bearer ${accessToken}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ action: 'generate', ...input }),
       signal: controller.signal,
     })
     const data = (await response.json().catch(() => ({}))) as AiCommentResponse
@@ -59,4 +70,34 @@ export async function generateAiComment(input: GenerateAiCommentInput): Promise<
   } finally {
     window.clearTimeout(timeoutId)
   }
+}
+
+export async function publishAiComment(inspirationId: string, content: string): Promise<CommentRow> {
+  const accessToken = await getAccessToken()
+  const trimmed = content.trim()
+  if (!trimmed) {
+    throw new Error('小i还没有生成有效评论')
+  }
+
+  const response = await fetch('/api/ai-comment', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'publish',
+      inspirationId,
+      content: trimmed.slice(0, MAX_COMMENT_LENGTH),
+    }),
+  })
+  const data = (await response.json().catch(() => ({}))) as PublishAiCommentResponse
+
+  if (!response.ok) {
+    throw new Error(data.error || '小i 评论发布失败，请稍后再试')
+  }
+  if (!data.comment) {
+    throw new Error('小i 评论发布失败，请稍后再试')
+  }
+  return data.comment
 }

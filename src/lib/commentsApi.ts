@@ -5,6 +5,7 @@ export const MAX_COMMENT_LENGTH = 500
 export const EDIT_WINDOW_MINUTES = 10
 
 export function canEditComment(comment: CommentRow, userId: string | undefined): boolean {
+  if (comment.is_ai_generated) return false
   if (!userId || comment.user_id !== userId) return false
   const created = new Date(comment.created_at).getTime()
   const elapsed = Date.now() - created
@@ -22,7 +23,11 @@ export async function fetchCommentsByInspirationId(inspirationId: string): Promi
   const rows = (data ?? []) as CommentRow[]
   if (rows.length === 0) return []
 
-  const userIds = [...new Set(rows.map((r) => r.user_id))]
+  const userIds = [
+    ...new Set(
+      rows.flatMap((r) => [r.user_id, r.requested_by_user_id]).filter((id): id is string => Boolean(id)),
+    ),
+  ]
   const { data: profiles, error: pErr } = await supabase
     .from('user_profiles')
     .select('user_id, nickname')
@@ -36,7 +41,8 @@ export async function fetchCommentsByInspirationId(inspirationId: string): Promi
 
   return rows.map((r) => ({
     ...r,
-    nickname: nickMap.get(r.user_id) ?? '用户',
+    nickname: r.is_ai_generated ? (r.ai_display_name ?? '小i') : (nickMap.get(r.user_id) ?? '用户'),
+    requested_by_nickname: r.requested_by_user_id ? (nickMap.get(r.requested_by_user_id) ?? '用户') : null,
   }))
 }
 

@@ -6,10 +6,13 @@ const MAX_COMMENT_LENGTH = 500
 const MAX_BODY_LENGTH = 4000
 
 type AiCommentRequest = {
+  action?: unknown
+  inspirationId?: unknown
   title?: unknown
   body?: unknown
   mood?: unknown
   tags?: unknown
+  content?: unknown
 }
 
 type ChatCompletionResponse = {
@@ -38,6 +41,22 @@ type PromptInput = {
   body: string
   mood: string
   tags: string[]
+}
+
+type SupabaseUser = {
+  id?: string
+}
+
+type CommentRow = {
+  id: string
+  inspiration_id: string
+  user_id: string
+  content: string
+  is_ai_generated: boolean
+  ai_display_name: string | null
+  requested_by_user_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 function asTrimmedString(value: unknown, maxLength: number): string {
@@ -69,7 +88,7 @@ function supabaseCredentials(): { base: string; anon: string } | null {
   return { base, anon }
 }
 
-async function isValidSupabaseSession(accessToken: string): Promise<boolean> {
+async function fetchSupabaseUser(accessToken: string): Promise<SupabaseUser | null> {
   const cred = supabaseCredentials()
   if (!cred) {
     throw new Error('Missing Supabase env on server')
@@ -81,7 +100,46 @@ async function isValidSupabaseSession(accessToken: string): Promise<boolean> {
       authorization: `Bearer ${accessToken}`,
     },
   })
-  return response.ok
+  if (!response.ok) return null
+  return (await response.json().catch(() => null)) as SupabaseUser | null
+}
+
+async function insertAiComment(input: {
+  accessToken: string
+  userId: string
+  inspirationId: string
+  content: string
+}): Promise<CommentRow> {
+  const cred = supabaseCredentials()
+  if (!cred) {
+    throw new Error('Missing Supabase env on server')
+  }
+
+  const response = await fetch(`${cred.base}/rest/v1/comments?select=*`, {
+    method: 'POST',
+    headers: {
+      apikey: cred.anon,
+      authorization: `Bearer ${input.accessToken}`,
+      'content-type': 'application/json',
+      prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      inspiration_id: input.inspirationId,
+      user_id: input.userId,
+      content: input.content,
+      is_ai_generated: true,
+      ai_display_name: '小i',
+      requested_by_user_id: input.userId,
+    }),
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message =
+      typeof data?.message === 'string' ? data.message : '小i 评论发布失败，请稍后再试'
+    throw new Error(message)
+  }
+  return (Array.isArray(data) ? data[0] : data) as CommentRow
 }
 
 function buildUserPrompt(input: PromptInput): string {
@@ -109,8 +167,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    if (!(await isValidSupabaseSession(accessToken))) {
+    const currentUser = await fetchSupabaseUser(accessToken)
+    if (!currentUser?.id) {
       res.status(401).json({ error: '登录状态已失效，请重新登录后再试' })
+      return
+    }
+
+    const payload = (req.body ?? {}) as AiCommentRequest
+    const action = asTrimmedString(payload.action, 20) || 'generate'
+    if (action === 'publish') {
+      const inspirationId = asTrimmedString(payload.inspirationId, 80)
+      const content = normalizeComment(asTrimmedString(payload.content, MAX_COMMENT_LENGTH))
+      if (!inspirationId || !content) {
+        res.status(400).json({ error: '缺少发布小i评论所需的内容' })
+        return
+      }
+      const inserted = await insertAiComment({
+        accessToken,
+        userId: currentUser.id,
+        inspirationId,
+        content,
+      })
+      res.status(200).json({ comment: inserted })
       return
     }
 
@@ -120,7 +198,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const payload = (req.body ?? {}) as AiCommentRequest
     const title = asTrimmedString(payload.title, 120)
     const body = asTrimmedString(payload.body, MAX_BODY_LENGTH)
     const mood = asTrimmedString(payload.mood, 80)

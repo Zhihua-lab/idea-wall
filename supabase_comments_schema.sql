@@ -7,6 +7,9 @@ create table if not exists comments (
   inspiration_id uuid not null references inspirations(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   content text not null check (length(content) > 0 and length(content) <= 500),
+  is_ai_generated boolean not null default false,
+  ai_display_name text,
+  requested_by_user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -15,6 +18,7 @@ create table if not exists comments (
 comment on table comments is '灵感评论';
 create index if not exists idx_comments_inspiration_id on comments(inspiration_id);
 create index if not exists idx_comments_created_at on comments(created_at);
+create index if not exists idx_comments_requested_by_user_id on comments(requested_by_user_id);
 
 -- 4. 启用 RLS
 alter table comments enable row level security;

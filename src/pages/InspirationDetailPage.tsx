@@ -12,7 +12,7 @@ import {
 } from '../lib/inspirationsApi'
 import { normalizeInspirationImages } from '../lib/inspirationStorage'
 import { moodIconForStored, moodLineForDetail } from '../lib/moodUi'
-import { generateAiComment } from '../lib/aiCommentApi'
+import { generateAiComment, publishAiComment } from '../lib/aiCommentApi'
 import {
   canEditComment,
   deleteComment,
@@ -72,6 +72,7 @@ export function InspirationDetailPage() {
   const [aiCommentOpen, setAiCommentOpen] = useState(false)
   const [aiCommentText, setAiCommentText] = useState('')
   const [aiCommentLoading, setAiCommentLoading] = useState(false)
+  const [aiCommentPublishing, setAiCommentPublishing] = useState(false)
   const [aiCommentError, setAiCommentError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -167,10 +168,28 @@ export function InspirationDetailPage() {
     }
   }
 
-  const handleInsertAiComment = () => {
-    if (!aiCommentText.trim()) return
-    setCommentText(aiCommentText.trim().slice(0, MAX_COMMENT_LENGTH))
-    setAiCommentOpen(false)
+  const handlePublishAiComment = async () => {
+    if (!row || !aiCommentText.trim() || aiCommentPublishing) return
+    setAiCommentPublishing(true)
+    setAiCommentError(null)
+    try {
+      const inserted = await publishAiComment(row.id, aiCommentText.trim())
+      setComments((prev) => [
+        ...prev,
+        {
+          ...inserted,
+          nickname: inserted.ai_display_name ?? '小i',
+          requested_by_nickname: authNickname ?? '用户',
+        },
+      ])
+      setRow((r) => (r ? { ...r, comments_count: r.comments_count + 1 } : r))
+      setAiCommentOpen(false)
+      setAiCommentText('')
+    } catch (e: unknown) {
+      setAiCommentError(e instanceof Error ? e.message : '小i 评论发布失败，请稍后再试')
+    } finally {
+      setAiCommentPublishing(false)
+    }
   }
 
   const handleStartEdit = (c: CommentWithNickname) => {
@@ -465,10 +484,21 @@ export function InspirationDetailPage() {
                       <div key={c.id} className="rounded-lg bg-surface p-sm border border-outline-variant/50">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-tertiary-container text-tertiary text-body-sm font-bold">
-                              {(c.nickname || '用户').charAt(0)}
+                            <div
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-body-sm font-bold ${
+                                c.is_ai_generated
+                                  ? 'bg-primary-container text-primary'
+                                  : 'bg-tertiary-container text-tertiary'
+                              }`}
+                            >
+                              {c.is_ai_generated ? 'i' : (c.nickname || '用户').charAt(0)}
                             </div>
-                            <span className="text-body-sm font-semibold text-on-surface">{c.nickname}</span>
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span className="text-body-sm font-semibold text-on-surface">{c.nickname}</span>
+                              {c.is_ai_generated && c.requested_by_nickname ? (
+                                <span className="text-body-sm text-outline">由 {c.requested_by_nickname} 召唤</span>
+                              ) : null}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-body-sm text-outline">{formatRelativeShort(c.created_at)}</span>
@@ -545,7 +575,7 @@ export function InspirationDetailPage() {
                         AI 评论预览
                       </h4>
                       <p className="mt-1 text-body-sm text-on-surface-variant">
-                        先看看这句合不合心意，插入后还可以自己改。
+                        先看看这句合不合心意，确认后由小i发表。
                       </p>
                     </div>
                     <button
@@ -589,12 +619,12 @@ export function InspirationDetailPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleInsertAiComment}
-                      disabled={aiCommentLoading || !aiCommentText.trim()}
+                      onClick={() => void handlePublishAiComment()}
+                      disabled={aiCommentLoading || aiCommentPublishing || !aiCommentText.trim()}
                       className="inline-flex items-center gap-1 rounded-full border-0 bg-primary px-md py-sm text-body-sm font-bold text-on-primary cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span className="material-symbols-outlined text-[20px]">edit_note</span>
-                      插入评论框
+                      <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+                      {aiCommentPublishing ? '发表中...' : '让小i发表'}
                     </button>
                   </div>
                 </div>
