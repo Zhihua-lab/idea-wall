@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const ZHIPU_CHAT_COMPLETIONS_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
-const ZHIPU_MODEL = 'glm-4.7-flash'
+const DEEPSEEK_CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions'
+const DEEPSEEK_MODEL = 'deepseek-chat'
 const MAX_COMMENT_LENGTH = 500
 const MAX_BODY_LENGTH = 4000
 
@@ -25,7 +25,7 @@ type ChatCompletionResponse = {
 
 function friendlyAiError(status: number, message: string | undefined): string {
   if (status === 401 || /invalid|authentication|unauthorized|api key/i.test(message ?? '')) {
-    return '智谱 API Key 无效，请检查 Vercel 里的 ZHIPU_API_KEY'
+    return 'DeepSeek API Key 无效，请检查 Vercel 里的 DEEPSEEK_API_KEY'
   }
   if (status === 429) {
     return 'AI 评论生成太频繁了，请稍后再试'
@@ -114,9 +114,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const apiKey = process.env.ZHIPU_API_KEY || process.env.BIGMODEL_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
-      res.status(500).json({ error: 'AI 评论暂未配置，请在 Vercel 配置 ZHIPU_API_KEY' })
+      res.status(500).json({ error: 'AI 评论暂未配置，请在 Vercel 配置 DEEPSEEK_API_KEY' })
       return
     }
 
@@ -131,14 +131,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const upstream = await fetch(ZHIPU_CHAT_COMPLETIONS_URL, {
+    const upstream = await fetch(DEEPSEEK_CHAT_COMPLETIONS_URL, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: ZHIPU_MODEL,
+        model: DEEPSEEK_MODEL,
         temperature: 0.82,
         max_tokens: 180,
         messages: [
