@@ -36,6 +36,16 @@ function friendlyAiError(status: number, message: string | undefined): string {
   return message || 'AI 评论生成失败，请稍后再试'
 }
 
+function friendlySupabaseInsertError(message: string): string {
+  if (/column|schema cache|ai_display_name|is_ai_generated|requested_by_user_id/i.test(message)) {
+    return '小满评论发布失败：请先在 Supabase 执行 AI 评论字段 SQL'
+  }
+  if (/row-level security|violates row-level security|permission denied/i.test(message)) {
+    return '小满评论发布失败：Supabase 评论写入权限被拒绝'
+  }
+  return message || '小满评论发布失败，请稍后再试'
+}
+
 type PromptInput = {
   title: string
   body: string
@@ -182,13 +192,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(400).json({ error: '缺少发布小满评论所需的内容' })
         return
       }
-      const inserted = await insertAiComment({
-        accessToken,
-        userId: currentUser.id,
-        inspirationId,
-        content,
-      })
-      res.status(200).json({ comment: inserted })
+      try {
+        const inserted = await insertAiComment({
+          accessToken,
+          userId: currentUser.id,
+          inspirationId,
+          content,
+        })
+        res.status(200).json({ comment: inserted })
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e)
+        res.status(502).json({ error: friendlySupabaseInsertError(message), detail: message })
+      }
       return
     }
 
